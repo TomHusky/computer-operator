@@ -57,11 +57,11 @@ metadata:
 在开始任何操作前，必须确保环境已初始化并确认屏幕参数。
 
 1. **自检依赖**:
-   如果运行后续脚本出现 `Module Not Found` 或指令缺失，请参照 [README.md](file:///Users/duodian/.claude/skills/computer-operator/README.md) 执行 `npm install`。
+   如果运行后续脚本出现 `Module Not Found` 或指令缺失，请参照 [README.md](./README.md) 执行 `npm install`。
 
 2. **获取屏幕缩放比例 (scale_factor)**:
    ```bash
-   node /Users/duodian/.claude/skills/computer-operator/scripts/screen_info.js
+   node ./scripts/screen_info.js
    ```
    记录输出中的 `scale_factor` (Retina 屏通常为 2)。
 > **⚠️ Retina 规则**：主屏幕截图通常是物理像素（如 2560x1600），而 `osascript` 交互使用逻辑坐标（1280x800）。
@@ -73,14 +73,14 @@ metadata:
 
 ### 2.1 全屏截图
 ```bash
-bash /Users/duodian/.claude/skills/computer-operator/scripts/screenshot.sh
+bash ./scripts/screenshot.sh
 ```
 保存路径：`/tmp/co_screenshot.png`。使用 `read_file` 查看全貌。
 
 ### 2.2 坐标换算指南（必看）
 每次截图后运行此脚本，获取最新的坐标映射示例：
 ```bash
-node /Users/duodian/.claude/skills/computer-operator/scripts/analyze_screen.js
+node ./scripts/analyze_screen.js
 ```
 
 ---
@@ -99,7 +99,7 @@ node /Users/duodian/.claude/skills/computer-operator/scripts/analyze_screen.js
 ```bash
 # 语法: node zoom_region.js <x> <y> <w> <h>
 # 示例: 放大左上角搜索框区域
-node /Users/duodian/.claude/skills/computer-operator/scripts/zoom_region.js 0 0 400 200
+node ./scripts/zoom_region.js 0 0 400 200
 ```
 读取并分析 `/tmp/co_zoom.png` 以获得**精确到像素**的坐标。
 
@@ -111,7 +111,7 @@ node /Users/duodian/.claude/skills/computer-operator/scripts/zoom_region.js 0 0 
 
 1. **自动获取窗口范围**：
    ```bash
-   node /Users/duodian/.claude/skills/computer-operator/scripts/get_window_bounds.js "微信"
+   node ./scripts/get_window_bounds.js "微信"
    ```
    输出包含 `logical_bounds` (x, y, width, height)。
 
@@ -131,15 +131,15 @@ node /Users/duodian/.claude/skills/computer-operator/scripts/zoom_region.js 0 0 
 
 ```bash
 # 单击/双击/右键 (截图像素坐标)
-node /Users/duodian/.claude/skills/computer-operator/scripts/mouse_action.js click 400 300
-node /Users/duodian/.claude/skills/computer-operator/scripts/mouse_action.js double_click 400 300
-node /Users/duodian/.claude/skills/computer-operator/scripts/mouse_action.js right_click 400 300
+node ./scripts/mouse_action.js click 400 300
+node ./scripts/mouse_action.js double_click 400 300
+node ./scripts/mouse_action.js right_click 400 300
 
 # 拖拽 (从起点到终点)
-node /Users/duodian/.claude/skills/computer-operator/scripts/mouse_action.js drag 100 100 500 500
+node ./scripts/mouse_action.js drag 100 100 500 500
 
 # 滚动 (正数向下，负数向上)
-node /Users/duodian/.claude/skills/computer-operator/scripts/mouse_action.js scroll 600 400 5
+node ./scripts/mouse_action.js scroll 600 400 5
 ```
 
 ### 4.2 键盘动作
@@ -147,11 +147,11 @@ node /Users/duodian/.claude/skills/computer-operator/scripts/mouse_action.js scr
 
 ```bash
 # 智能输入 (自动检测中英文，输入后按回车)
-node /Users/duodian/.claude/skills/computer-operator/scripts/keyboard_action.js type_enter "你好，王宇"
+node ./scripts/keyboard_action.js type_enter "hello world！"
 
 # 快捷键 (command/shift/option/control)
-node /Users/duodian/.claude/skills/computer-operator/scripts/keyboard_action.js hotkey "command+a"
-node /Users/duodian/.claude/skills/computer-operator/scripts/keyboard_action.js hotkey "command+v"
+node ./scripts/keyboard_action.js hotkey "command+a"
+node ./scripts/keyboard_action.js hotkey "command+v"
 ```
 
 ---
@@ -213,7 +213,7 @@ while (未达到结束条件):
 ### 6.3 获取窗口精准范围
 VS Code 的 UI 元素（如按钮、状态栏）通常很小，强烈建议配合：
 ```bash
-node /Users/duodian/.claude/skills/computer-operator/scripts/get_window_bounds.js "Visual Studio Code"
+node ./scripts/get_window_bounds.js "Visual Studio Code"
 ```
 获取窗口位置后，对 Copilot 的对话框区域进行精细缩放。
 
@@ -224,7 +224,7 @@ node /Users/duodian/.claude/skills/computer-operator/scripts/get_window_bounds.j
 ### 5.1 像素验证
 判断某个位置是否变色（如按钮是否被选中，页面是否加载）：
 ```bash
-node /Users/duodian/.claude/skills/computer-operator/scripts/get_pixel.js 400 300
+node ./scripts/get_pixel.js 400 300
 ```
 
 ---
