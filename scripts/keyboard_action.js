@@ -3,8 +3,7 @@
  * keyboard_action.js — 键盘输入控制（支持中文剪贴板方式输入）
  *
  * 用法:
- *   node keyboard_action.js type <文字>          # 输入文字（自动检测中文）
- *   node keyboard_action.js type_cn <文字>       # 强制剪贴板输入中文
+ *   node keyboard_action.js type <文字>          # 输入文字（统一使用剪贴板粘贴方式）
  *   node keyboard_action.js type_enter <文字>    # 输入后按 Enter
  *   node keyboard_action.js key <键名>           # 按单个键
  *   node keyboard_action.js hotkey <组合键>      # 快捷键（用+分隔）
@@ -58,24 +57,8 @@ function runAppleScript(script) {
 }
 
 // ─── 输入函数 ────────────────────────────────────────────────────
-function hasChinese(text) {
-  return /[\u4e00-\u9fff\u3400-\u4dbf\uff00-\uffef]/.test(text);
-}
-
-function typeText(text) {
-  if (hasChinese(text)) {
-    typeCn(text);
-    return;
-  }
-  // 英文数字：直接 keystroke
-  // 转义特殊字符
-  const escaped = text.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-  runAppleScript(`tell application "System Events" to keystroke "${escaped}"`);
-  console.log(`✅ 输入文字: ${JSON.stringify(text)}`);
-}
-
-function typeCn(text) {
-  // 写入剪贴板后粘贴（完美支持中文和特殊字符）
+function typeViaClipboard(text) {
+  // 写入剪贴板后粘贴（完美支持中英文、特殊字符和表情）
   const result = spawnSync('pbcopy', [], {
     input: text,
     encoding: 'utf8',
@@ -84,18 +67,15 @@ function typeCn(text) {
   if (result.status !== 0) throw new Error('pbcopy 失败');
 
   // 延迟一小段确保剪贴板已更新
-  execSleep(100);
+  execSleep(50);
 
+  // Command+V 粘贴
   runAppleScript('tell application "System Events" to keystroke "v" using command down');
-  console.log(`✅ 剪贴板输入: ${JSON.stringify(text)}`);
+  console.log(`✅ 文本输入(剪贴板方式): ${JSON.stringify(text)}`);
 }
 
 function typeEnter(text) {
-  if (hasChinese(text)) {
-    typeCn(text);
-  } else {
-    typeText(text);
-  }
+  typeViaClipboard(text);
   execSleep(100);
   runAppleScript('tell application "System Events" to key code 36'); // return key
   console.log(`✅ 输入并回车: ${JSON.stringify(text)}`);
@@ -178,7 +158,6 @@ function main() {
   if (args.length === 0) {
     console.log(`用法:
   node keyboard_action.js type <文字>
-  node keyboard_action.js type_cn <文字>
   node keyboard_action.js type_enter <文字>
   node keyboard_action.js key <键名>
   node keyboard_action.js hotkey <组合键>`);
@@ -191,10 +170,8 @@ function main() {
   try {
     switch (action) {
       case 'type':
-        typeText(rest);
-        break;
-      case 'type_cn':
-        typeCn(rest);
+      case 'type_cn': // 保留 type_cn 别名
+        typeViaClipboard(rest);
         break;
       case 'type_enter':
         typeEnter(rest);
