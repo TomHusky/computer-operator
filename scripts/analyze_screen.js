@@ -142,6 +142,7 @@ function analyze(imagePath) {
   return result;
 }
 
-const imagePath = process.argv[2] || '/tmp/co_screenshot.png';
+const rawImagePath = process.argv[2] || '/tmp/co_screenshot.png';
+const imagePath = fs.existsSync(rawImagePath) ? fs.realpathSync(rawImagePath) : rawImagePath;
 const output = analyze(imagePath);
 console.log(JSON.stringify(output, null, 2));

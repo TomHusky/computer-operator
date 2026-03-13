@@ -42,8 +42,9 @@ function main() {
   }
 
   const [x, y, w, h] = args.slice(0, 4).map(Number);
-  const outputPath = args[4] || '/tmp/co_zoom.png';
-  const sourceImg = '/tmp/co_screenshot.png';
+  const outputPath = args[4] || `/tmp/co_zoom_${Date.now()}.png`;
+  const rawSourceImg = '/tmp/co_screenshot.png';
+  const sourceImg = fs.existsSync(rawSourceImg) ? fs.realpathSync(rawSourceImg) : rawSourceImg;
 
   if (!fs.existsSync(sourceImg)) {
     console.error(`❌ 源截图不存在: ${sourceImg}，请先运行截图`);
@@ -95,6 +96,11 @@ function main() {
   ]);
 
   if (fs.existsSync(tmpCrop)) fs.unlinkSync(tmpCrop);
+
+  if (!args[4]) {
+    try { fs.unlinkSync('/tmp/co_zoom.png'); } catch(e) {}
+    try { fs.symlinkSync(outputPath, '/tmp/co_zoom.png'); } catch(e) {}
+  }
 
   console.log(JSON.stringify({
     status: 'ok',

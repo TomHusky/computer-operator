@@ -73,7 +73,8 @@ function main() {
 
   const x = parseInt(args[0]);
   const y = parseInt(args[1]);
-  const imgPath = args[2] || '/tmp/co_screenshot.png';
+  const rawImgPath = args[2] || '/tmp/co_screenshot.png';
+  const imgPath = fs.existsSync(rawImgPath) ? fs.realpathSync(rawImgPath) : rawImgPath;
 
   if (!fs.existsSync(imgPath)) {
     console.error(`❌ 截图不存在: ${imgPath}`);
