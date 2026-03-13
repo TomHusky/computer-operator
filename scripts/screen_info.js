@@ -20,10 +20,14 @@ function getScreenshotSize() {
 
   const sips = spawnSync('sips', ['-g', 'pixelWidth', '-g', 'pixelHeight', tmpPath], { encoding: 'utf8' });
   let w = null, h = null;
-  for (const line of sips.stdout.split('\n')) {
-    if (line.includes('pixelWidth')) w = parseInt(line.split(':')[1].trim());
-    if (line.includes('pixelHeight')) h = parseInt(line.split(':')[1].trim());
+  
+  if (sips.stdout) {
+    for (const line of sips.stdout.split('\n')) {
+      if (line.includes('pixelWidth')) w = parseInt(line.split(':')[1].trim());
+      if (line.includes('pixelHeight')) h = parseInt(line.split(':')[1].trim());
+    }
   }
+
   if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath);
   return { physicalW: w, physicalH: h };
 }
@@ -31,8 +35,13 @@ function getScreenshotSize() {
 // ─── 从 system_profiler 获取主屏分辨率 ──────────────────────────
 function getDisplayInfo() {
   const result = spawnSync('system_profiler', ['SPDisplaysDataType'], { encoding: 'utf8', timeout: 10000 });
-  const lines = result.stdout.split('\n');
   const screens = [];
+  
+  if (!result.stdout) {
+    return screens;
+  }
+
+  const lines = result.stdout.split('\n');
   let current = null;
 
   for (const line of lines) {

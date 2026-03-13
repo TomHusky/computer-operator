@@ -29,10 +29,12 @@ function getScaleFactor() {
     if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath);
 
     let physicalW = null;
-    for (const line of sips.stdout.split('\n')) {
-      if (line.includes('pixelWidth')) {
-        physicalW = parseInt(line.split(':')[1].trim());
-        break;
+    if (sips.stdout) {
+      for (const line of sips.stdout.split('\n')) {
+        if (line.includes('pixelWidth')) {
+          physicalW = parseInt(line.split(':')[1].trim());
+          break;
+        }
       }
     }
 
