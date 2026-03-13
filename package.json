@@ -1,0 +1,32 @@
+{
+  "name": "@anthropic/computer-operator",
+  "version": "2.1.0",
+  "description": "Vision-driven macOS desktop automation using natural language",
+  "main": "src/index.js",
+  "bin": {
+    "computer-operator": "./bin/cli.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "automation",
+    "desktop",
+    "macos",
+    "vision",
+    "ai",
+    "screenshot",
+    "mouse",
+    "keyboard"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "dependencies": {
+    "commander": "^11.0.0",
+    "chalk": "^4.1.2",
+    "ora": "^5.4.1"
+  }
+}
