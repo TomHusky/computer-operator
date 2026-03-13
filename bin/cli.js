@@ -35,7 +35,7 @@ program
     const spinner = ora('Capturing screenshot...').start();
     const result = spawnSync('bash', [scriptPath]);
     if (result.status === 0) {
-      spinner.succeed(chalk.green('Screenshot saved to /tmp/co_screenshot.png'));
+      spinner.succeed(chalk.green('Screenshot saved to /tmp/computer-operator/latest.png'));
     } else {
       spinner.fail(chalk.red('Failed to capture screenshot.'));
     }
@@ -44,7 +44,7 @@ program
 program
   .command('analyze')
   .description('Analyze the latest screenshot and output coordinate guide')
-  .argument('[image]', 'Path to the image to analyze', '/tmp/co_screenshot.png')
+  .argument('[image]', 'Path to the image to analyze', '/tmp/computer-operator/latest.png')
   .action((image) => {
     const scriptPath = path.join(__dirname, '../scripts/analyze_screen.js');
     const result = spawnSync('node', [scriptPath, image], { stdio: 'inherit' });

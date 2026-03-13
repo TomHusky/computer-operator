@@ -2,13 +2,7 @@
 /**
  * analyze_screen.js — 分析截图坐标信息，输出换算指南
  * 用法: node analyze_screen.js [截图路径]
- * 默认: /tmp/co_screenshot.png
- *
- * ⚠️ 核心功能：明确告诉 AI：
- *   - 截图的物理像素尺寸
- *   - 当前的 scale_factor
- *   - 如何将截图坐标换算为点击坐标
- *   - 屏幕网格分区参考（帮助定位）
+ * 默认: /tmp/computer-operator/latest.png
  */
 
 const { spawnSync } = require('child_process');
@@ -23,7 +17,8 @@ function getScaleFactor() {
       'tell application "Finder" to get bounds of window of desktop'
     ], { encoding: 'utf8', timeout: 5000 });
 
-    const tmpPath = path.join(os.tmpdir(), 'co_scale_probe.png');
+    const baseDir = '/tmp/computer-operator';
+    const tmpPath = path.join(baseDir, 'co_scale_probe.png');
     spawnSync('screencapture', ['-x', tmpPath], { timeout: 5000 });
     const sips = spawnSync('sips', ['-g', 'pixelWidth', tmpPath], { encoding: 'utf8' });
     if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath);
@@ -142,7 +137,7 @@ function analyze(imagePath) {
   return result;
 }
 
-const rawImagePath = process.argv[2] || '/tmp/co_screenshot.png';
+const rawImagePath = process.argv[2] || '/tmp/computer-operator/latest.png';
 const imagePath = fs.existsSync(rawImagePath) ? fs.realpathSync(rawImagePath) : rawImagePath;
 const output = analyze(imagePath);
 console.log(JSON.stringify(output, null, 2));

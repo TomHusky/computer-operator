@@ -11,12 +11,6 @@ package-lock.json
 ehthumbs.db
 Thumbs.db
 
-# Temporary files
-/tmp/
-co_screenshot.png
-co_zoom.png
-co_scale_probe.png
-
 # Logs
 *.log
 npm-debug.log*
