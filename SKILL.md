@@ -3,6 +3,7 @@ name: computer-operator
 description: |
   视觉驱动的 macOS 电脑操控通用技能。
   基于“观察-理解-规划-执行”的闭环，通过视觉识别任何 App 的 UI 并进行精准操作。
+  **核心语义理解：此技能运行在 Apple macOS 系统上。AI 应识别标准的 macOS 元素，如顶栏菜单 (Menu Bar)、底栏 (Dock)、红黄绿窗口控制按钮。**
   支持多显示器、Retina 缩放、复杂 UI 元素识别。
 
   触发词：帮我操作电脑、截图看看、点击xxx、打开xxx、输入文字、自动化操作
@@ -57,7 +58,7 @@ metadata:
 ### 2. 存储与缓存管理
 - 所有文件在 `/tmp/computer-operator/` 下。
 - 每次全捕获前会清空目录。
-- **Actionable AI 准则**：严禁使用对话历史中的旧图，必须以最新的 `latest.png` 或其解析后的真实路径为准。
+- **Actionable AI 准则**：严禁使用对话历史中的旧图。必须以最新的 `/tmp/computer-operator/latest.jpg` 为全局观察入口，而精准操作（如 zoom/get_pixel）必须引用 `/tmp/computer-operator/latest_highres.png`。
 
 ---
 

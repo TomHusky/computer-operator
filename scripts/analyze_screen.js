@@ -57,8 +57,28 @@ function getImageSize(imagePath) {
   return { width: w, height: h };
 }
 
+function getSystemContext() {
+  const context = { os: 'macOS' };
+  try {
+    const sw = spawnSync('sw_vers', ['-productVersion'], { encoding: 'utf8' });
+    context.os_version = sw.stdout.trim();
+    
+    // 检测是否为深色模式
+    const dark = spawnSync('defaults', ['read', '-g', 'AppleInterfaceStyle'], { encoding: 'utf8' });
+    context.appearance = dark.status === 0 ? 'Dark' : 'Light';
+
+    // 获取当前前台应用
+    const activeApp = spawnSync('osascript', ['-e', 'tell application "System Events" to get name of first process whose frontmost is true'], { encoding: 'utf8' });
+    context.active_app = activeApp.stdout.trim();
+  } catch (e) {}
+  return context;
+}
+
 function analyze(imagePath) {
-  const result = { image_path: imagePath };
+  const result = { 
+    image_path: imagePath,
+    system_context: getSystemContext()
+  };
 
   if (!fs.existsSync(imagePath)) {
     result.error = `文件不存在: ${imagePath}`;

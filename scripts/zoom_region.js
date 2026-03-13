@@ -12,7 +12,7 @@
  *   node zoom_region.js 800 100 400 200 /tmp/computer-operator/zoom.png
  *
  * 输出:
- *   /tmp/co_zoom.png（默认）—— 放大 2x 的区域截图，方便 AI 精细分析
+ *   /tmp/computer-operator/latest_zoom.png（默认）—— 放大 2x 的区域截图，方便 AI 精细分析
  *
  * 依赖: macOS 原生 sips / screencapture（无需安装）
  */
@@ -44,7 +44,7 @@ function main() {
   const [x, y, w, h] = args.slice(0, 4).map(Number);
   const baseDir = '/tmp/computer-operator';
   const outputPath = args[4] || `${baseDir}/zoom_${Date.now()}.png`;
-  const rawSourceImg = `${baseDir}/latest.png`;
+  const rawSourceImg = `${baseDir}/latest_highres.png`;
   const sourceImg = fs.existsSync(rawSourceImg) ? fs.realpathSync(rawSourceImg) : rawSourceImg;
 
   if (!fs.existsSync(sourceImg)) {

@@ -57,10 +57,11 @@ Load the `SKILL.md` file located in the root directory. This file contains the f
 
 ---
 ## 📂 Screenshot Storage
-All visual assets are stored in `/tmp/computer-operator/` to ensure privacy and prevent cluttering the system `/tmp` root.
-- `latest.jpg`: Compressed full-screen screenshot for AI analysis.
-- `latest_highres.png`: High-resolution original for `zoom_region.js` and `get_pixel.js`.
-- `latest_zoom.png`: The most recent zoomed-in region.
+All visual assets are stored in `/tmp/computer-operator/` to ensure privacy and prevent cluttering the system.
+- `latest.jpg`: **Compressed** screenshot (low-res) for **AI observation and goal planning** (fast transmission).
+- `latest_highres.png`: **High-resolution** original screenshot for **precision actions** (zoom_region, get_pixel).
+- `latest.png`: Symlink to the high-resolution original for backward compatibility.
+- `latest_zoom.png`: The most recent zoomed-in region for fine-detail analysis.
 
 ---
 *Developed for advanced agentic coding workflows.*

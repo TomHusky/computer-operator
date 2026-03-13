@@ -17,8 +17,9 @@ if [ $? -eq 0 ]; then
     # 生成压缩版 (low 质量选项，减小体积)，保持像素尺寸完全一致
     sips -s format jpeg -s formatOptions low "$OUTPUT_HIGHRES" --out "$OUTPUT_COMPRESSED" >/dev/null 2>&1
     
-    # 创建软链接，分离 AI 视图用图与精准裁剪用图
+    # 创建软链接到 latest.png 和 latest_highres.png，方便统一读取
     ln -sf "$OUTPUT_HIGHRES" "$BASE_DIR/latest_highres.png"
+    ln -sf "$OUTPUT_HIGHRES" "$BASE_DIR/latest.png"
     ln -sf "$OUTPUT_COMPRESSED" "$BASE_DIR/latest.jpg"
     
     echo "截图成功:"
