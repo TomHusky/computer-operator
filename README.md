@@ -1,6 +1,6 @@
 # Computer Operator (macOS Skill)
 
-Vision-driven macOS desktop automation using **GLM-4V (glm-4.7)**. This skill allows an AI agent to control the desktop via screenshots, precise coordinate mapping, and native AppleScript interactions.
+Vision-driven macOS desktop automation using **glm-4.7**. This skill allows an AI agent to control the desktop via screenshots, precise coordinate mapping, and native AppleScript interactions.
 
 ---
 

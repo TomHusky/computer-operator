@@ -1,11 +1,11 @@
 ---
 name: computer-operator
 description: |
-  视觉驱动的 macOS 电脑操控技能。使用 **GLM-4V (glm-4.7)** 视觉模型作为核心识别引擎。
+  视觉驱动的 macOS 电脑操控技能。使用视觉作为核心识别引擎。
   通过截图-分析-操作-验证的闭环流程，精细化控制电脑桌面。
   使用原生 macOS 工具（screencapture, osascript）+ Node.js 实现，支持多显示器、Retina 缩放、中文输入及复杂 IDE 交互。
 
-  触发词：帮我操作电脑、截图看看、点击xxx、打开xxx应用、输入文字、滚动页面、自动化操作、使用 glm 分析屏幕
+  触发词：帮我操作电脑、截图看看、点击xxx、打开xxx应用、输入文字、滚动页面、自动化操作、使用分析屏幕
 license: MIT
 metadata:
   author: Copilot
