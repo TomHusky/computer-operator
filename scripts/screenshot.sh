@@ -14,6 +14,10 @@ if [ $? -eq 0 ]; then
     echo "截图成功: $OUTPUT"
     # 输出文件大小供参考
     ls -lh "$OUTPUT" | awk '{print "文件大小: " $5}'
+    
+    # 清理超过1分钟的历史截图和放大图，避免占用磁盘空间
+    find /tmp -name "co_screenshot_*.png" -mmin +1 -delete 2>/dev/null || true
+    find /tmp -name "co_zoom_*.png" -mmin +1 -delete 2>/dev/null || true
 else
     echo "截图失败，请检查 screencapture 权限" >&2
     exit 1
