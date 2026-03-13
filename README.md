@@ -19,6 +19,8 @@ cd computer-operator
 Initialize the environment and install Node.js dependencies:
 ```bash
 npm install
+# Ensure scripts have execution permissions
+chmod +x scripts/*.sh
 ```
 
 ### 3. Environment Verification

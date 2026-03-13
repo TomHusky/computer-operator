@@ -10,7 +10,7 @@ rm -rf "$BASE_DIR"/*
 OUTPUT="${1:-$BASE_DIR/screenshot_$(date +%s).png}"
 
 # -x 静默（无快门声）; -t png 格式
-screencapture -x -t png "$OUTPUT"
+/usr/sbin/screencapture -x -t png "$OUTPUT"
 
 if [ $? -eq 0 ]; then
     # 创建软链接到 latest.png，方便统一读取
