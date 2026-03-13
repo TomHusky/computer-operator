@@ -9,7 +9,7 @@
  *
  * 例:
  *   node zoom_region.js 800 100 400 200          # 放大左上角区域
- *   node zoom_region.js 800 100 400 200 /tmp/zoom.png
+ *   node zoom_region.js 800 100 400 200 /tmp/computer-operator/zoom.png
  *
  * 输出:
  *   /tmp/co_zoom.png（默认）—— 放大 2x 的区域截图，方便 AI 精细分析
@@ -32,18 +32,19 @@ function main() {
     console.log(`用法:
   node zoom_region.js <x> <y> <width> <height> [输出路径]
   
-  从 /tmp/co_screenshot.png 裁剪指定区域并放大 2 倍后保存
+  从 /tmp/computer-operator/latest.png 裁剪指定区域并放大 2 倍后保存
   坐标使用截图像素坐标
   
 示例:
-  node zoom_region.js 100 50 600 300           → 输出 /tmp/co_zoom.png
-  node zoom_region.js 100 50 600 300 /tmp/z.png`);
+  node zoom_region.js 100 50 600 300           → 输出 /tmp/computer-operator/latest_zoom.png
+  node zoom_region.js 100 50 600 300 /tmp/computer-operator/z.png`);
     process.exit(0);
   }
 
   const [x, y, w, h] = args.slice(0, 4).map(Number);
-  const outputPath = args[4] || `/tmp/co_zoom_${Date.now()}.png`;
-  const rawSourceImg = '/tmp/co_screenshot.png';
+  const baseDir = '/tmp/computer-operator';
+  const outputPath = args[4] || `${baseDir}/zoom_${Date.now()}.png`;
+  const rawSourceImg = `${baseDir}/latest.png`;
   const sourceImg = fs.existsSync(rawSourceImg) ? fs.realpathSync(rawSourceImg) : rawSourceImg;
 
   if (!fs.existsSync(sourceImg)) {
@@ -72,7 +73,7 @@ function main() {
 
   // 2. 用 sips 裁剪区域
   //    sips crop: sips -c <height> <width> --cropOffset <y> <x> input -o output
-  const tmpCrop = '/tmp/co_zoom_crop.png';
+  const tmpCrop = `${baseDir}/zoom_crop_temp.png`;
   
   // 先复制一份
   fs.copyFileSync(sourceImg, tmpCrop);
@@ -98,8 +99,9 @@ function main() {
   if (fs.existsSync(tmpCrop)) fs.unlinkSync(tmpCrop);
 
   if (!args[4]) {
-    try { fs.unlinkSync('/tmp/co_zoom.png'); } catch(e) {}
-    try { fs.symlinkSync(outputPath, '/tmp/co_zoom.png'); } catch(e) {}
+    const latestZoom = `${baseDir}/latest_zoom.png`;
+    try { fs.unlinkSync(latestZoom); } catch(e) {}
+    try { fs.symlinkSync(outputPath, latestZoom); } catch(e) {}
   }
 
   console.log(JSON.stringify({

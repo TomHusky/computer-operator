@@ -15,7 +15,8 @@ const path = require('path');
 
 // ─── 获取截图物理像素尺寸 ────────────────────────────────────────
 function getScreenshotSize() {
-  const tmpPath = path.join(os.tmpdir(), 'co_scale_probe.png');
+  const baseDir = '/tmp/computer-operator';
+  const tmpPath = path.join(baseDir, 'co_scale_probe.png');
   spawnSync('screencapture', ['-x', '-m', tmpPath], { timeout: 5000 });  // -m 仅截主屏
 
   const sips = spawnSync('sips', ['-g', 'pixelWidth', '-g', 'pixelHeight', tmpPath], { encoding: 'utf8' });

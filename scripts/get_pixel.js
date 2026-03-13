@@ -9,7 +9,7 @@
  *
  * 例:
  *   node get_pixel.js 960 540          # 获取 (960,540) 处颜色
- *   node get_pixel.js 960 540 /tmp/co_screenshot.png
+ *   node get_pixel.js 960 540 /tmp/computer-operator/latest.png
  *
  * 用途:
  *   - 点击后截图，获取点击坐标像素颜色，确认点击到了正确的 UI 元素
@@ -67,13 +67,13 @@ function main() {
   
 示例:
   node get_pixel.js 960 540
-  node get_pixel.js 200 100 /tmp/co_screenshot.png`);
+  node get_pixel.js 200 100 /tmp/computer-operator/latest.png`);
     process.exit(0);
   }
 
   const x = parseInt(args[0]);
   const y = parseInt(args[1]);
-  const rawImgPath = args[2] || '/tmp/co_screenshot.png';
+  const rawImgPath = args[2] || '/tmp/computer-operator/latest.png';
   const imgPath = fs.existsSync(rawImgPath) ? fs.realpathSync(rawImgPath) : rawImgPath;
 
   if (!fs.existsSync(imgPath)) {
@@ -95,7 +95,8 @@ function main() {
   }
 
   // 用 sips 裁剪 1x1 像素
-  const tmpPixel = '/tmp/co_pixel_probe.png';
+  const baseDir = '/tmp/computer-operator';
+  const tmpPixel = `${baseDir}/pixel_probe_temp.png`;
   
   // 复制并裁剪到 1x1
   fs.copyFileSync(imgPath, tmpPixel);

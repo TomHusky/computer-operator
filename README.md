@@ -50,6 +50,13 @@ Load the `SKILL.md` file located in the root directory. This file contains the f
 3. **Precision Locking**: Use `get_window_bounds.js` or `zoom_region.js` for small/scaled UI elements.
 4. **Action**: Use `mouse_action.js` or `keyboard_action.js` to interact.
 5. **Validation**: Use `get_pixel.js` to confirm the UI changed as expected.
+6. **Cleanup**: All temporary files and screenshots are stored in `/tmp/computer-operator/`. The `screenshot.sh` script automatically clears this directory before each new capture.
+
+---
+## 📂 Screenshot Storage
+All visual assets are stored in `/tmp/computer-operator/` to ensure privacy and prevent cluttering the system `/tmp` root.
+- `latest.png`: The most recent full-screen screenshot.
+- `latest_zoom.png`: The most recent zoomed-in region.
 
 ---
 *Developed for advanced agentic coding workflows.*
