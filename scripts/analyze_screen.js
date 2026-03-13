@@ -2,13 +2,7 @@
 /**
  * analyze_screen.js — 分析截图坐标信息，输出换算指南
  * 用法: node analyze_screen.js [截图路径]
- * 默认: /tmp/co_screenshot.png
- *
- * ⚠️ 核心功能：明确告诉 AI：
- *   - 截图的物理像素尺寸
- *   - 当前的 scale_factor
- *   - 如何将截图坐标换算为点击坐标
- *   - 屏幕网格分区参考（帮助定位）
+ * 默认: /tmp/computer-operator/latest.png
  */
 
 const { spawnSync } = require('child_process');

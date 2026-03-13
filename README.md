@@ -1,6 +1,6 @@
 # Computer Operator (macOS Skill)
 
-Vision-driven macOS desktop automation using **glm-4.7**. This skill allows an AI agent to control the desktop via screenshots, precise coordinate mapping, and native AppleScript interactions.
+Vision-driven macOS desktop automation. This skill allows an AI agent to control the desktop via screenshots, precise coordinate mapping, and native AppleScript interactions.
 
 ---
 
@@ -32,7 +32,7 @@ bash scripts/screenshot.sh
 ```
 
 ### 4. Skill Registration
-Load the `SKILL.md` file located in the root directory. This file contains the full technical specification, tool descriptions, and strategy patterns (including specialized support for WeChat, QQ, and VS Code).
+Load the `SKILL.md` file located in the root directory. This file contains the full technical specification, tool descriptions, and strategy patterns.
 
 ---
 
@@ -42,12 +42,13 @@ Load the `SKILL.md` file located in the root directory. This file contains the f
 - `scripts/`: Implementation of core automation tools (Node.js/AppleScript).
 - `bin/cli.js`: CLI entry point for the `computer-operator` command.
 - `package.json`: Dependency and metadata definition.
+- `guidelines/`: Specialized strategies for specific applications (WeChat, VS Code, etc.).
 
 ## 🚀 Core Workflow for AI Agents
 
 1. **State Perception**: Use `screenshot.sh` to capture the current screen.
 2. **Analysis**: Use `analyze_screen.js` to get the `scale_factor` and grid orientation.
-3. **Precision Locking**: Use `get_window_bounds.js` or `zoom_region.js` for small/scaled UI elements.
+3. **Precision Locking**: Use `zoom_region.js` for small/scaled UI elements.
 4. **Action**: Use `mouse_action.js` or `keyboard_action.js` to interact.
 5. **Validation**: Use `get_pixel.js` to confirm the UI changed as expected.
 6. **Cleanup**: All temporary files and screenshots are stored in `/tmp/computer-operator/`. The `screenshot.sh` script automatically clears this directory before each new capture.

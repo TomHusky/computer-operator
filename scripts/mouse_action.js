@@ -30,7 +30,8 @@ function getScaleFactor() {
       'tell application "Finder" to get bounds of window of desktop'
     ], { encoding: 'utf8', timeout: 5000 });
 
-    const tmpPath = path.join(os.tmpdir(), 'co_scale_probe.png');
+    const baseDir = '/tmp/computer-operator';
+    const tmpPath = path.join(baseDir, 'co_scale_probe.png');
     spawnSync('screencapture', ['-x', tmpPath], { timeout: 5000 });
     const sips = spawnSync('sips', ['-g', 'pixelWidth', tmpPath], { encoding: 'utf8' });
     if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath);
