@@ -9,7 +9,7 @@
  *
  * 例:
  *   node get_pixel.js 960 540          # 获取 (960,540) 处颜色
- *   node get_pixel.js 960 540 /tmp/computer-operator/latest.png
+ *   node get_pixel.js 960 540 /tmp/computer-operator/latest_highres.png
  *
  * 用途:
  *   - 点击后截图，获取点击坐标像素颜色，确认点击到了正确的 UI 元素
@@ -67,13 +67,13 @@ function main() {
   
 示例:
   node get_pixel.js 960 540
-  node get_pixel.js 200 100 /tmp/computer-operator/latest.png`);
+  node get_pixel.js 200 100 /tmp/computer-operator/latest_highres.png`);
     process.exit(0);
   }
 
   const x = parseInt(args[0]);
   const y = parseInt(args[1]);
-  const rawImgPath = args[2] || '/tmp/computer-operator/latest.png';
+  const rawImgPath = args[2] || '/tmp/computer-operator/latest_highres.png';
   const imgPath = fs.existsSync(rawImgPath) ? fs.realpathSync(rawImgPath) : rawImgPath;
 
   if (!fs.existsSync(imgPath)) {

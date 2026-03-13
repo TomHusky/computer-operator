@@ -36,7 +36,7 @@ metadata:
 ╔═══════════════════════════════════════════════════════════════════╗
 ║                  Vision-Thinking 操控闭环                         ║
 ║                                                                   ║
-║  [1] 全屏截图 (screenshot.sh) -> 建立当前会话的唯一事实来源         ║
+║  [1] 全屏截图 (screenshot.sh) -> 生成 latest.jpg (压缩版全视野) 与 latest_highres.png (原始像素)         ║
 ║  [2] 环境分析 (analyze_screen.js) -> 获取换算比例与定位参考        ║
 ║  [3] 意图解析 (Vision Reasoning) -> 识别目标元素及特征              ║
 ║  [4] 区域放大 (zoom_region.js) -> 对密集 UI 进行像素级二次确认     ║

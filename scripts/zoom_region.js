@@ -5,7 +5,7 @@
  * 用法:
  *   node zoom_region.js <x> <y> <width> <height> [输出路径]
  *
- * 参数为【截图像素坐标】（无需换算），坐标对应全屏截图 /tmp/co_screenshot.png
+ * 参数为【截图像素坐标】（无需换算），坐标对应全屏截图 /tmp/computer-operator/latest_highres.png
  *
  * 例:
  *   node zoom_region.js 800 100 400 200          # 放大左上角区域
@@ -32,7 +32,7 @@ function main() {
     console.log(`用法:
   node zoom_region.js <x> <y> <width> <height> [输出路径]
   
-  从 /tmp/computer-operator/latest.png 裁剪指定区域并放大 2 倍后保存
+  从 /tmp/computer-operator/latest_highres.png 裁剪指定区域并放大 2 倍后保存
   坐标使用截图像素坐标
   
 示例:

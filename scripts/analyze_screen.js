@@ -2,7 +2,7 @@
 /**
  * analyze_screen.js — 分析截图坐标信息，输出换算指南
  * 用法: node analyze_screen.js [截图路径]
- * 默认: /tmp/computer-operator/latest.png
+ * 默认: /tmp/computer-operator/latest.jpg
  */
 
 const { spawnSync } = require('child_process');
@@ -137,7 +137,7 @@ function analyze(imagePath) {
   return result;
 }
 
-const rawImagePath = process.argv[2] || '/tmp/computer-operator/latest.png';
+const rawImagePath = process.argv[2] || '/tmp/computer-operator/latest.jpg';
 const imagePath = fs.existsSync(rawImagePath) ? fs.realpathSync(rawImagePath) : rawImagePath;
 const output = analyze(imagePath);
 console.log(JSON.stringify(output, null, 2));
