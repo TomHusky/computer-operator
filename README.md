@@ -46,12 +46,35 @@ Load the `SKILL.md` file located in the root directory. This file contains the f
 - `package.json`: Dependency and metadata definition.
 - `guidelines/`: Specialized strategies for specific applications (WeChat, VS Code, etc.).
 
+## App Control
+
+Use the dedicated app controller instead of ad-hoc AppleScript launch snippets:
+
+```bash
+computer-operator app open QQ --fullscreen
+computer-operator app open "Visual Studio Code"
+computer-operator app fullscreen QQ
+```
+
+The `open` action uses macOS `open -a`, then activates the app. Fullscreen is attempted with the standard `control+command+f` shortcut, which requires Accessibility permission for the terminal or `osascript`.
+
+## Text Input
+
+Text input now uses clipboard paste by default so Chinese text, punctuation, and emoji are not affected by the current input method:
+
+```bash
+computer-operator keyboard paste "你好，世界"
+computer-operator keyboard paste_enter "收到，我现在处理"
+```
+
+The script temporarily writes to the clipboard, pastes with `command+v`, then restores the previous clipboard contents.
+
 ## 🚀 Core Workflow for AI Agents
 
 1. **State Perception**: Use `screenshot.sh` to capture the current screen.
 2. **Analysis**: Use `analyze_screen.js` to get the `scale_factor` and grid orientation.
 3. **Precision Locking**: Use `zoom_region.js` for small/scaled UI elements.
-4. **Action**: Use `mouse_action.js` or `keyboard_action.js` to interact.
+4. **Action**: Use `app_action.js`, `mouse_action.js`, or `keyboard_action.js` to interact.
 5. **Validation**: Use `get_pixel.js` to confirm the UI changed as expected.
 6. **Cleanup**: All temporary files and screenshots are stored in `/tmp/computer-operator/`. The `screenshot.sh` script automatically clears this directory before each new capture.
 

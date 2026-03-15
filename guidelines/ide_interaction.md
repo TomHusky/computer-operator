@@ -6,6 +6,8 @@
 
 不要试图通过视觉点击菜单栏，效率极低且不稳定。优先使用标准快捷键，并用截图验证结果。
 
+启动 IDE 时，统一先执行：`computer-operator app open "Visual Studio Code" --fullscreen`
+
 - **唤起文件**: `Command + P` -> 输入文件名。
 - **全局搜索**: `Command + Shift + F`。
 - **唤起 Copilot Chat (行内)**: `Command + I`。
@@ -16,6 +18,7 @@
 当指挥内置 AI 修改代码时，必须执行以下验证流程：
 
 1. **观察变化**：输入指令后，截图检查编辑器是否出现了差异 (Diff) 视图。
+   文本输入统一使用：`computer-operator keyboard paste "你的指令"`
 2. **定位按钮区**：利用 `zoom_region.js` 放大对话框底部的按钮区。
 3. **识别动作**：
    - 认清 `Accept` (接受)、`Apply` (应用) 或 `Discard` (放弃)。

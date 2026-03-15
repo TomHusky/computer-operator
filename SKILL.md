@@ -60,6 +60,17 @@ metadata:
 - 每次全捕获前会清空目录。
 - **Actionable AI 准则**：严禁使用对话历史中的旧图。必须以最新的 `/tmp/computer-operator/latest.jpg` 为全局观察入口，而精准操作（如 zoom/get_pixel）必须引用 `/tmp/computer-operator/latest_highres.png`。
 
+### 3. 应用打开与全屏
+- 打开应用统一使用 `app_action.js`，避免外部直接拼接不稳定的 AppleScript。
+- 推荐命令：`computer-operator app open QQ --fullscreen`
+- `open` 内部使用 macOS `open -a`，随后激活窗口；`--fullscreen` 会尝试发送系统标准全屏快捷键 `control+command+f`。
+- 若提示“不允许辅助功能访问”，说明当前终端或 `osascript` 没有辅助功能权限，需要在系统设置中授权。
+
+### 4. 文本输入策略
+- 文本输入统一走 `computer-operator keyboard paste` 或 `paste_enter`。
+- 中文、符号、emoji 一律通过“写入剪贴板 -> `command+v` 粘贴”的方式输入，避免输入法组合态造成乱码或未确认。
+- `paste_enter` 适用于聊天发送框等需要立即确认发送的场景。
+
 ---
 
 ## 模块化指南
@@ -85,6 +96,7 @@ AI 在面对未知 App 时应寻找以下模式：
 
 | 脚本 | 功能 |
 |------|------|
+| `app_action.js` | 打开/激活/全屏应用 |
 | `screenshot.sh` | 采集 |
 | `screen_info.js` | 参数 |
 | `mouse_action.js`| 鼠标操作 |

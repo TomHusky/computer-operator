@@ -53,4 +53,38 @@ program
     }
   });
 
+program
+  .command('app')
+  .description('Open, activate, or fullscreen an app')
+  .argument('<action>', 'open | activate | fullscreen')
+  .argument('<name...>', 'App name')
+  .option('-f, --fullscreen', 'Enter fullscreen after opening')
+  .action((action, nameParts, options) => {
+    const scriptPath = path.join(__dirname, '../scripts/app_action.js');
+    const args = [scriptPath, action, ...nameParts];
+
+    if (options.fullscreen) {
+      args.push('--fullscreen');
+    }
+
+    const result = spawnSync('node', args, { stdio: 'inherit' });
+    if (result.status !== 0) {
+      console.error(chalk.red('\nApp action failed.'));
+    }
+  });
+
+program
+  .command('keyboard')
+  .description('Paste text, press keys, or send hotkeys')
+  .argument('<action>', 'type | paste | type_enter | paste_enter | key | hotkey')
+  .argument('[value...]', 'Text or key payload')
+  .action((action, valueParts) => {
+    const scriptPath = path.join(__dirname, '../scripts/keyboard_action.js');
+    const args = [scriptPath, action, ...valueParts];
+    const result = spawnSync('node', args, { stdio: 'inherit' });
+    if (result.status !== 0) {
+      console.error(chalk.red('\nKeyboard action failed.'));
+    }
+  });
+
 program.parse();

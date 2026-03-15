@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 /**
- * keyboard_action.js — 键盘输入控制（支持中文剪贴板方式输入）
+ * keyboard_action.js — 键盘输入控制（中文统一走剪贴板粘贴）
  *
  * 用法:
- *   node keyboard_action.js type <文字>          # 输入文字（统一使用剪贴板粘贴方式）
- *   node keyboard_action.js type_enter <文字>    # 输入后按 Enter
+ *   node keyboard_action.js type <文字>          # 粘贴文字
+ *   node keyboard_action.js paste <文字>         # 粘贴文字（别名）
+ *   node keyboard_action.js type_enter <文字>    # 粘贴后按 Enter
+ *   node keyboard_action.js paste_enter <文字>   # 粘贴后按 Enter（别名）
  *   node keyboard_action.js key <键名>           # 按单个键
  *   node keyboard_action.js hotkey <组合键>      # 快捷键（用+分隔）
  *
@@ -57,28 +59,51 @@ function runAppleScript(script) {
 }
 
 // ─── 输入函数 ────────────────────────────────────────────────────
-function typeViaClipboard(text) {
-  // 写入剪贴板后粘贴（完美支持中英文、特殊字符和表情）
+function readClipboard() {
+  const result = spawnSync('pbpaste', [], {
+    encoding: 'utf8',
+    timeout: 3000
+  });
+  if (result.status !== 0) {
+    throw new Error(result.stderr?.trim() || 'pbpaste 失败');
+  }
+  return result.stdout;
+}
+
+function writeClipboard(text) {
   const result = spawnSync('pbcopy', [], {
     input: text,
     encoding: 'utf8',
     timeout: 3000
   });
-  if (result.status !== 0) throw new Error('pbcopy 失败');
+  if (result.status !== 0) {
+    throw new Error(result.stderr?.trim() || 'pbcopy 失败');
+  }
+}
 
-  // 延迟一小段确保剪贴板已更新
-  execSleep(50);
+function typeViaClipboard(text) {
+  const previousClipboard = readClipboard();
 
-  // Command+V 粘贴
-  runAppleScript('tell application "System Events" to keystroke "v" using command down');
-  console.log(`✅ 文本输入(剪贴板方式): ${JSON.stringify(text)}`);
+  try {
+    writeClipboard(text);
+    execSleep(120);
+    runAppleScript('tell application "System Events" to keystroke "v" using command down');
+    execSleep(120);
+    console.log(`✅ 文本已粘贴: ${JSON.stringify(text)}`);
+  } finally {
+    try {
+      writeClipboard(previousClipboard);
+    } catch (error) {
+      console.warn(`⚠️ 恢复剪贴板失败: ${error.message}`);
+    }
+  }
 }
 
 function typeEnter(text) {
   typeViaClipboard(text);
-  execSleep(100);
+  execSleep(120);
   runAppleScript('tell application "System Events" to key code 36'); // return key
-  console.log(`✅ 输入并回车: ${JSON.stringify(text)}`);
+  console.log(`✅ 粘贴并回车: ${JSON.stringify(text)}`);
 }
 
 function pressKey(keyName) {
@@ -158,7 +183,9 @@ function main() {
   if (args.length === 0) {
     console.log(`用法:
   node keyboard_action.js type <文字>
+  node keyboard_action.js paste <文字>
   node keyboard_action.js type_enter <文字>
+  node keyboard_action.js paste_enter <文字>
   node keyboard_action.js key <键名>
   node keyboard_action.js hotkey <组合键>`);
     process.exit(0);
@@ -170,10 +197,12 @@ function main() {
   try {
     switch (action) {
       case 'type':
+      case 'paste':
       case 'type_cn': // 保留 type_cn 别名
         typeViaClipboard(rest);
         break;
       case 'type_enter':
+      case 'paste_enter':
         typeEnter(rest);
         break;
       case 'key':
