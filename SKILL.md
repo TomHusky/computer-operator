@@ -10,7 +10,7 @@ description: |
 license: MIT
 metadata:
   author: Copilot
-  version: "3.0"
+  version: "3.1"
   platform: macOS
 ---
 
@@ -19,95 +19,260 @@ metadata:
 > **⚠️ 重要警告：此技能将真实控制你的鼠标和键盘。在 AI 操作期间，请勿移动鼠标或敲击键盘，以免干扰定位。**
 
 > **⚠️ 恢复执行协议：只要对话中断、用户让 AI “继续”、或上一步动作可能改变了界面，第一步必须重新执行 `computer-operator observe`。禁止复用历史截图和历史视觉判断。**
+ßß
+## 超短执行版
 
----
+这是给模型高频读取的执行卡片。目标不是服务某几个 App，而是让模型能用同一套视觉闭环去操作任意 macOS App。
+ß
+### 条硬规则
 
-## 核心哲学：视觉驱动的自主推理
+1. 新任务、继续执行、界面变化后，先 `computer-operator observe`。
+2. 不用历史截图，不复用旧坐标。
+3. 先全图判断，再局部放大；不要反复看整张大图。
+4. 找控件优先 `computer-operator ui-map`。
+5. 输入统一 `computer-operator keyboard paste`，发送统一 `paste_enter`。
+6. 每次动作后再 `computer-operator observe` 验证。
 
-本技能不依赖于对特定软件的硬编码规则，而是模拟人类的视觉交互过程：
+### 最短流程
 
-1. **观察 (Observe)**：实时截取屏幕，获取当前的“所见即所得”状态。
-2. **逻辑理解 (Understand)**：AI 识别屏幕上的视觉模式（按钮、图标、文本框、状态栏）。
-3. **任务规划 (Plan)**：基于理解结果，拆解达到目标所需的原子动作。
-4. **动作执行 (Execute)**：精准换算像素坐标并执行物理操作。
-
----
-
-## 工作流程闭环
-
-```
-╔═══════════════════════════════════════════════════════════════════╗
-║                  Vision-Thinking 操控闭环                         ║
-║                                                                   ║
-║  [1] 全屏截图 (screenshot.sh) -> 生成 latest.jpg (压缩版全视野) 与 latest_highres.png (原始像素)         ║
-║  [2] 环境分析 (analyze_screen.js) -> 获取换算比例与定位参考        ║
-║  [3] 意图解析 (Vision Reasoning) -> 识别目标元素及特征              ║
-║  [4] 区域放大 (zoom_region.js) -> 对密集 UI 进行像素级二次确认     ║
-║  [5] 动作执行 (操作脚本) -> 执行点击、输入或拖拽                   ║
-║  [6] 验证状态 -> 再次截图确认 UI 反馈，若未达标则回溯循环          ║
-╚═══════════════════════════════════════════════════════════════════╝
+```text
+observe
+-> ui-map
+-> 选元素
+-> 必要时 zoom + ui-map --image <局部图>
+-> mouse / keyboard
+-> observe
 ```
 
----
+### 通用任务原语
 
-## 精准定位与操作
+先把用户目标拆成下面 8 类动作，再组合，不要一上来就套某个 App 的固定脚本：
 
-### 1. 坐标系规则 (Retina 适配)
-- **物理像素**：截图采用的原始分辨率（如 2560x1600）。
-- **逻辑坐标**：系统交互采用的分辨率（如 1280x800）。
-- **换算指南**：始终运行 `analyze_screen.js`。**`mouse_action.js` 接受截图像素坐标，内部会自动处理缩放。**
+1. 打开或切换 App
+2. 定位区域
+3. 找可操作控件
+4. 点击或双击
+5. 输入或提交
+6. 滚动或拖拽
+7. 读取状态
+8. 验证结果
 
-### 2. 存储与缓存管理
-- 所有文件在 `/tmp/computer-operator/` 下。
-- 每次全捕获前会清空目录。
-- **Actionable AI 准则**：严禁使用对话历史中的旧图。必须以最新的 `/tmp/computer-operator/latest.jpg` 为全局观察入口，而精准操作（如 zoom/get_pixel）必须引用 `/tmp/computer-operator/latest_highres.png`。
-- 恢复执行时，统一先运行：`computer-operator observe`
-- 若 `analyze_screen.js` 输出中的 `capture.freshness` 不是 `fresh`，应视为高风险旧图，先重新截图再继续。
+任何复杂任务，本质上都是这 8 类动作的组合。
 
-### 3. 应用打开与全屏
-- 打开应用统一使用 `app_action.js`，避免外部直接拼接不稳定的 AppleScript。
-- 推荐命令：`computer-operator app open QQ --fullscreen`
-- `open` 内部使用 macOS `open -a`，随后激活窗口；`--fullscreen` 会尝试发送系统标准全屏快捷键 `control+command+f`。
-- 若提示“不允许辅助功能访问”，说明当前终端或 `osascript` 没有辅助功能权限，需要在系统设置中授权。
+### 命令选择
 
-### 4. 文本输入策略
-- 文本输入统一走 `computer-operator keyboard paste` 或 `paste_enter`。
-- 中文、符号、emoji 一律通过“写入剪贴板 -> `command+v` 粘贴”的方式输入，避免输入法组合态造成乱码或未确认。
-- `paste_enter` 适用于聊天发送框等需要立即确认发送的场景。
+- 打开或切换 App：`computer-operator app open <App>` / `computer-operator app activate <App>`
+- 读取当前界面整体状态：`computer-operator observe`
+- 如果用户给的是自然语言任务目标，先执行：`computer-operator task-plan "<任务目标>"`
+- 找按钮、标签、列表项、菜单项：`computer-operator ui-map`
+- 找输入框、搜索框：`computer-operator ui-map`，优先 `input` / `search_box`
 
----
+如果用户给的是一句完整目标，而不是明确命令，先让 task-router 产出首条命令链，再执行。
+- 目标太密、太小、太模糊：`computer-operator zoom ...` 后再 `computer-operator ui-map --image <局部图>`
+- 页面需要往下找内容：`computer-operator mouse scroll <dx> <dy>`
+- 需要拖动滑块、窗口、分隔条、文件：`computer-operator mouse drag <x1> <y1> <x2> <y2>`
+- 输入文本：先点击，再 `computer-operator keyboard paste "文本"`
+- 聊天发送：先点击输入框，再 `computer-operator keyboard paste_enter "文本"`
+- 校验颜色或状态：`computer-operator pixel <x> <y>`
 
-## 模块化指南
+### 模式
 
-针对特定复杂场景，本技能引用了外部深度指南。当任务涉及以下 App 时，**必须阅读**对应文件：
+- `fast`：只想快速定位区域
+- `balanced`：默认，绝大多数任务先用它
+- `precise`：密集界面或连续两次未命中时再用
 
-- [社交软件操作指南](./guidelines/social_apps.md) (WeChat, QQ, Feishu)
-- [开发者工具交互指南](./guidelines/ide_interaction.md) (VS Code, Copilot Chat)
+### 任务目标 -> 命令序列模板
 
----
+先用通用模板，只有在确实知道是社交软件或 IDE 时，才套用专用示例。
 
-## 通用 UI 模式识别建议
+也可以先运行：
 
-AI 在面对未知 App 时应寻找以下模式：
-- **操作性按钮**：通常带有背景色块、圆角或阴影，且包含动词（OK, Apply, Submit）。
-- **状态指示器**：检查颜色变化（红/绿/黄）或进度条百分比。
-- **导航栏/侧边栏**：寻找图标加文字的垂直或水平排列。
-- **输入域**：寻找带有光标或占位符文本的框。
+```text
+computer-operator task-plan "<用户目标>"
+```
 
----
+让系统先输出参数槽位、建议命令链、场景和推荐阅读的专用指南。
 
-## 依赖脚本速查
+#### 模板 A：打开 App -> 到达目标界面
 
-| 脚本 | 功能 |
-|------|------|
-| `app_action.js` | 打开/激活/全屏应用 |
-| `observe` (CLI) | 重新截图并立即分析 |
-| `screenshot.sh` | 采集 |
-| `screen_info.js` | 参数 |
-| `mouse_action.js`| 鼠标操作 |
-| `keyboard_action.js`| 键盘/输入 |
-| `zoom_region.js` | 像素级放大 |
-| `analyze_screen.js` | 坐标换算指南 |
-| `get_pixel.js` | 颜色/状态校验 |
+```text
+computer-operator app open <App名>
+computer-operator observe
+computer-operator ui-map --mode balanced
+必要时 mouse click <x> <y>
+computer-operator observe
+```
 
----
+#### 模板 B：定位控件 -> 点击
+
+```text
+computer-operator observe
+computer-operator ui-map --mode balanced
+computer-operator mouse click <目标中心x> <目标中心y>
+computer-operator observe
+```
+
+#### 模板 C：定位输入控件 -> 输入文本
+
+```text
+computer-operator observe
+computer-operator ui-map --mode balanced
+computer-operator mouse click <输入框中心x> <输入框中心y>
+computer-operator keyboard paste "<文本>"
+computer-operator observe
+```
+
+#### 模板 D：翻找内容 -> 再定位 -> 再点击
+
+```text
+computer-operator observe
+computer-operator ui-map --mode balanced
+如果没看到目标，computer-operator mouse scroll 0 -480
+computer-operator observe
+computer-operator ui-map --mode balanced
+computer-operator mouse click <目标中心x> <目标中心y>
+computer-operator observe
+```
+
+#### 模板 E：密集区域 -> 局部放大 -> 精确操作
+
+```text
+computer-operator observe
+computer-operator zoom <区域x> <区域y> <区域w> <区域h>
+computer-operator ui-map --image /tmp/computer-operator/latest_zoom.png --mode precise
+computer-operator mouse click <目标中心x> <目标中心y>
+computer-operator observe
+```
+
+#### 模板 F：拖拽类操作
+
+```text
+computer-operator observe
+computer-operator ui-map --mode balanced
+computer-operator mouse drag <起点x> <起点y> <终点x> <终点y>
+computer-operator observe
+```
+
+#### 模板 G：状态确认类操作
+
+```text
+computer-operator observe
+必要时 computer-operator zoom <区域x> <区域y> <区域w> <区域h>
+必要时 computer-operator pixel <x> <y>
+```
+
+#### 专用示例：打开 App -> 找控件 -> 点击
+
+这是示例，不是默认唯一流程。
+
+```text
+computer-operator app open <App名>
+computer-operator observe
+computer-operator ui-map --mode balanced
+computer-operator mouse click <x> <y>
+computer-operator observe
+```
+
+#### 专用示例：打开 App -> 找输入框 -> 输入文本
+
+这是示例，不是默认唯一流程。
+
+```text
+computer-operator app open <App名>
+computer-operator observe
+computer-operator ui-map --mode balanced
+computer-operator mouse click <输入框中心x> <输入框中心y>
+computer-operator keyboard paste "<文本>"
+computer-operator observe
+```
+
+#### 专用示例：找搜索框 -> 输入查询
+
+这是示例，不是默认唯一流程。
+
+```text
+computer-operator observe
+computer-operator ui-map --mode balanced
+computer-operator mouse click <搜索框中心x> <搜索框中心y>
+computer-operator keyboard paste "<查询词>"
+computer-operator observe
+```
+
+#### 专用示例：QQ/微信/飞书搜索联系人后发送消息
+
+这是社交软件示例，不应覆盖通用规则。
+
+```text
+computer-operator app open <QQ/微信/飞书>
+computer-operator observe
+computer-operator ui-map --mode balanced
+computer-operator mouse click <搜索框中心x> <搜索框中心y>
+computer-operator keyboard paste "<联系人或群名>"
+computer-operator observe
+computer-operator ui-map --mode balanced
+computer-operator mouse click <联系人项中心x> <联系人项中心y>
+computer-operator observe
+computer-operator ui-map --mode balanced
+computer-operator mouse click <输入框中心x> <输入框中心y>
+computer-operator keyboard paste_enter "<消息内容>"
+computer-operator observe
+```
+
+#### 专用示例：用户说“帮我打开 QQ 找到搜索框输入 xxx”
+
+优先输出这条动作链：
+
+```text
+computer-operator app open QQ
+computer-operator observe
+computer-operator ui-map --mode balanced
+computer-operator mouse click <搜索框中心x> <搜索框中心y>
+computer-operator keyboard paste "xxx"
+computer-operator observe
+```
+
+如果搜索框不稳定，再降级：
+
+```text
+computer-operator observe
+computer-operator zoom <疑似搜索区域x> <y> <w> <h>
+computer-operator ui-map --image /tmp/computer-operator/latest_zoom.png --mode precise
+computer-operator mouse click <搜索框中心x> <搜索框中心y>
+computer-operator keyboard paste "xxx"
+computer-operator observe
+```
+
+### 选元素只看 4 个字段
+
+1. `label` 是否命中目标词
+2. `type` 是否符合预期
+3. `confidence` 是否足够高
+4. `center` 是否便于直接点击
+
+只要其中 2 项不稳，就先 `zoom`，不要硬点。
+
+补充：如果目标是 `icon_button` 或 `toolbar_button`，再额外看 `semantic.role`。它可帮助判断该控件更像返回、搜索、设置、更多、展开/收起，但只应作为辅助，不应压过位置和上下文。
+
+### 通用理解规则
+
+- 不要假设界面结构固定；同一个 App 在不同版本、窗口尺寸、登录状态下都可能完全不同。
+- 不要依赖某个 App 的私有节点树；主路径永远是截图、ui-map、zoom、mouse、keyboard。
+- 菜单栏、工具栏、侧边栏、列表区、详情区、底部操作栏，都要按视觉区域重新判断。
+- 如果用户目标是“完成任务”而不是“点某个按钮”，先把任务拆成多步动作链再执行。
+
+### 回退
+
+以下任一情况立即回退：点击没反应、页面不对、`ui-map` 不稳、区域太密。
+
+```text
+computer-operator observe
+computer-operator zoom ...
+computer-operator ui-map --image <局部图>
+重新选元素
+再执行
+```
+
+### 深度指南
+
+- [社交软件操作指南](./guidelines/social_apps.md)：仅在 QQ、微信、飞书等场景使用
+- [开发者工具交互指南](./guidelines/ide_interaction.md)：仅在 VS Code、Cursor、Copilot Chat 等 IDE 场景使用

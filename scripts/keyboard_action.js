@@ -8,20 +8,16 @@
  *   node keyboard_action.js type_enter <文字>    # 粘贴后按 Enter
  *   node keyboard_action.js paste_enter <文字>   # 粘贴后按 Enter（别名）
  *   node keyboard_action.js key <键名>           # 按单个键
- *   node keyboard_action.js hotkey <组合键>      # 快捷键（用+分隔）
  *
  * 常用键名: return, escape, tab, space, delete, up, down, left, right,
  *           f1-f12, home, end, pageup, pagedown
- *
- * 快捷键示例:
- *   command+c  复制    command+v  粘贴    command+a  全选
- *   command+z  撤销    command+w  关闭    command+q  退出
- *   command+space  Spotlight    command+tab  切换应用
  *
  * 依赖: 使用 osascript (AppleScript) 实现，无需额外安装
  */
 
 const { spawnSync } = require('child_process');
+
+const DEFAULT_DELAY_MS = 180;
 
 // ─── AppleScript 键名映射 ────────────────────────────────────────
 const KEY_MAP = {
@@ -39,14 +35,6 @@ const KEY_MAP = {
   'f9': 'f9', 'f10': 'f10', 'f11': 'f11', 'f12': 'f12',
 };
 
-// AppleScript 修饰键映射
-const MOD_MAP = {
-  'command': 'command down', 'cmd': 'command down',
-  'shift': 'shift down',
-  'option': 'option down', 'opt': 'option down', 'alt': 'option down',
-  'control': 'control down', 'ctrl': 'control down',
-};
-
 function runAppleScript(script) {
   const result = spawnSync('osascript', ['-e', script], {
     encoding: 'utf8',
@@ -58,40 +46,80 @@ function runAppleScript(script) {
   return result.stdout.trim();
 }
 
+function sleep(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+function withRetries(label, fn, attempts = 3) {
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      return fn();
+    } catch (error) {
+      lastError = error;
+      if (attempt < attempts) {
+        sleep(DEFAULT_DELAY_MS * attempt);
+      }
+    }
+  }
+
+  throw new Error(`${label}: ${lastError.message}`);
+}
+
+function runAppleScriptWithArgs(lines, args = []) {
+  const commandArgs = [];
+  for (const line of lines) {
+    commandArgs.push('-e', line);
+  }
+  if (args.length > 0) {
+    commandArgs.push('--', ...args);
+  }
+
+  const result = spawnSync('osascript', commandArgs, {
+    encoding: 'utf8',
+    timeout: 10000,
+    env: {
+      ...process.env,
+      LANG: 'en_US.UTF-8',
+      LC_ALL: 'en_US.UTF-8'
+    }
+  });
+
+  if (result.status !== 0) {
+    throw new Error(result.stderr?.trim() || 'AppleScript 参数调用失败');
+  }
+  return result.stdout.trim();
+}
+
 // ─── 输入函数 ────────────────────────────────────────────────────
 function readClipboard() {
-  const result = spawnSync('pbpaste', [], {
-    encoding: 'utf8',
-    timeout: 3000
-  });
-  if (result.status !== 0) {
-    throw new Error(result.stderr?.trim() || 'pbpaste 失败');
+  try {
+    return runAppleScript('the clipboard as text');
+  } catch (error) {
+    return '';
   }
-  return result.stdout;
 }
 
 function writeClipboard(text) {
-  const result = spawnSync('pbcopy', [], {
-    input: text,
-    encoding: 'utf8',
-    timeout: 3000
-  });
-  if (result.status !== 0) {
-    throw new Error(result.stderr?.trim() || 'pbcopy 失败');
-  }
+  runAppleScriptWithArgs([
+    'on run argv',
+    'set the clipboard to item 1 of argv',
+    'end run'
+  ], [text]);
 }
 
 function typeViaClipboard(text) {
-  const previousClipboard = readClipboard();
+  const previousClipboard = withRetries('读取剪贴板失败', () => readClipboard(), 2);
 
   try {
-    writeClipboard(text);
-    execSleep(120);
-    runAppleScript('tell application "System Events" to keystroke "v" using command down');
-    execSleep(120);
+    withRetries('写入剪贴板失败', () => writeClipboard(text), 3);
+    sleep(DEFAULT_DELAY_MS);
+    withRetries('执行粘贴失败', () => runAppleScript('tell application "System Events" to keystroke "v" using command down'), 3);
+    sleep(DEFAULT_DELAY_MS + 60);
     console.log(`✅ 文本已粘贴: ${JSON.stringify(text)}`);
   } finally {
     try {
+      sleep(DEFAULT_DELAY_MS);
       writeClipboard(previousClipboard);
     } catch (error) {
       console.warn(`⚠️ 恢复剪贴板失败: ${error.message}`);
@@ -101,8 +129,8 @@ function typeViaClipboard(text) {
 
 function typeEnter(text) {
   typeViaClipboard(text);
-  execSleep(120);
-  runAppleScript('tell application "System Events" to key code 36'); // return key
+  sleep(DEFAULT_DELAY_MS);
+  withRetries('回车失败', () => runAppleScript('tell application "System Events" to key code 36'), 3);
   console.log(`✅ 粘贴并回车: ${JSON.stringify(text)}`);
 }
 
@@ -134,48 +162,6 @@ function keyCodeForName(name) {
   return codes[name] !== undefined ? codes[name] : 36;
 }
 
-function hotkey(combo) {
-  const parts = combo.toLowerCase().split('+');
-  const modifiers = [];
-  let keyPart = null;
-
-  for (const part of parts) {
-    if (MOD_MAP[part]) {
-      modifiers.push(MOD_MAP[part]);
-    } else {
-      keyPart = part;
-    }
-  }
-
-  if (!keyPart) {
-    throw new Error(`无效的快捷键: ${combo}`);
-  }
-
-  let script;
-  const modStr = modifiers.length > 0 ? ` using {${modifiers.join(', ')}}` : '';
-
-  // 单字母/数字 keystroke
-  if (keyPart.length === 1) {
-    script = `tell application "System Events" to keystroke "${keyPart}"${modStr}`;
-  } else {
-    const mapped = KEY_MAP[keyPart];
-    if (mapped) {
-      const code = keyCodeForName(mapped);
-      script = `tell application "System Events" to key code ${code}${modStr}`;
-    } else {
-      script = `tell application "System Events" to keystroke "${keyPart}"${modStr}`;
-    }
-  }
-
-  runAppleScript(script);
-  console.log(`✅ 快捷键: ${combo}`);
-}
-
-function execSleep(ms) {
-  const end = Date.now() + ms;
-  while (Date.now() < end) {}
-}
-
 // ─── 主函数 ──────────────────────────────────────────────────────
 function main() {
   const args = process.argv.slice(2);
@@ -186,8 +172,7 @@ function main() {
   node keyboard_action.js paste <文字>
   node keyboard_action.js type_enter <文字>
   node keyboard_action.js paste_enter <文字>
-  node keyboard_action.js key <键名>
-  node keyboard_action.js hotkey <组合键>`);
+  node keyboard_action.js key <键名>`);
     process.exit(0);
   }
 
@@ -206,10 +191,8 @@ function main() {
         typeEnter(rest);
         break;
       case 'key':
+        if (!args[1]) throw new Error('请提供键名');
         pressKey(args[1]);
-        break;
-      case 'hotkey':
-        hotkey(args[1]);
         break;
       default:
         console.error(`❌ 未知操作: ${action}`);
