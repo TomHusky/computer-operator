@@ -18,6 +18,8 @@ metadata:
 
 > **⚠️ 重要警告：此技能将真实控制你的鼠标和键盘。在 AI 操作期间，请勿移动鼠标或敲击键盘，以免干扰定位。**
 
+> **⚠️ 恢复执行协议：只要对话中断、用户让 AI “继续”、或上一步动作可能改变了界面，第一步必须重新执行 `computer-operator observe`。禁止复用历史截图和历史视觉判断。**
+
 ---
 
 ## 核心哲学：视觉驱动的自主推理
@@ -59,6 +61,8 @@ metadata:
 - 所有文件在 `/tmp/computer-operator/` 下。
 - 每次全捕获前会清空目录。
 - **Actionable AI 准则**：严禁使用对话历史中的旧图。必须以最新的 `/tmp/computer-operator/latest.jpg` 为全局观察入口，而精准操作（如 zoom/get_pixel）必须引用 `/tmp/computer-operator/latest_highres.png`。
+- 恢复执行时，统一先运行：`computer-operator observe`
+- 若 `analyze_screen.js` 输出中的 `capture.freshness` 不是 `fresh`，应视为高风险旧图，先重新截图再继续。
 
 ### 3. 应用打开与全屏
 - 打开应用统一使用 `app_action.js`，避免外部直接拼接不稳定的 AppleScript。
@@ -97,6 +101,7 @@ AI 在面对未知 App 时应寻找以下模式：
 | 脚本 | 功能 |
 |------|------|
 | `app_action.js` | 打开/激活/全屏应用 |
+| `observe` (CLI) | 重新截图并立即分析 |
 | `screenshot.sh` | 采集 |
 | `screen_info.js` | 参数 |
 | `mouse_action.js`| 鼠标操作 |

@@ -54,6 +54,43 @@ program
   });
 
 program
+  .command('observe')
+  .description('Capture a fresh screenshot and immediately analyze it')
+  .action(() => {
+    const screenshotPath = path.join(__dirname, '../scripts/screenshot.sh');
+    const analyzePath = path.join(__dirname, '../scripts/analyze_screen.js');
+    const spinner = ora('Capturing a fresh screenshot and analyzing screen state...').start();
+
+    const screenshot = spawnSync('bash', [screenshotPath], { encoding: 'utf8' });
+    if (screenshot.status !== 0) {
+      spinner.fail(chalk.red('Failed to capture screenshot.'));
+      if (screenshot.stderr) {
+        process.stderr.write(screenshot.stderr);
+      }
+      return;
+    }
+
+    spinner.text = 'Analyzing fresh screenshot...';
+    const analyze = spawnSync('node', [analyzePath, '/tmp/computer-operator/latest.jpg'], {
+      encoding: 'utf8'
+    });
+
+    if (analyze.status !== 0) {
+      spinner.fail(chalk.red('Failed to analyze screenshot.'));
+      if (analyze.stderr) {
+        process.stderr.write(analyze.stderr);
+      }
+      return;
+    }
+
+    spinner.succeed(chalk.green('Fresh screenshot captured and analyzed.'));
+    if (screenshot.stdout) {
+      process.stdout.write(screenshot.stdout);
+    }
+    process.stdout.write(analyze.stdout);
+  });
+
+program
   .command('app')
   .description('Open, activate, or fullscreen an app')
   .argument('<action>', 'open | activate | fullscreen')

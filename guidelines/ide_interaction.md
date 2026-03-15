@@ -7,6 +7,7 @@
 不要试图通过视觉点击菜单栏，效率极低且不稳定。优先使用标准快捷键，并用截图验证结果。
 
 启动 IDE 时，统一先执行：`computer-operator app open "Visual Studio Code" --fullscreen`
+如果用户在中断后要求“继续”，第一步必须执行：`computer-operator observe`，重新获取当前 IDE 画面，禁止沿用上一次截图结论。
 
 - **唤起文件**: `Command + P` -> 输入文件名。
 - **全局搜索**: `Command + Shift + F`。
@@ -19,6 +20,7 @@
 
 1. **观察变化**：输入指令后，截图检查编辑器是否出现了差异 (Diff) 视图。
    文本输入统一使用：`computer-operator keyboard paste "你的指令"`
+   如果是恢复执行，则先跑 `computer-operator observe`，确认当前编辑器、面板焦点和弹窗状态没有变化。
 2. **定位按钮区**：利用 `zoom_region.js` 放大对话框底部的按钮区。
 3. **识别动作**：
    - 认清 `Accept` (接受)、`Apply` (应用) 或 `Discard` (放弃)。

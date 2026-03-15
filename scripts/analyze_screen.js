@@ -74,6 +74,34 @@ function getSystemContext() {
   return context;
 }
 
+function getCaptureMeta(imagePath) {
+  const metaPath = '/tmp/computer-operator/latest_meta.json';
+  const capture = {};
+
+  if (fs.existsSync(metaPath)) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+      if (parsed.captured_at) capture.captured_at = parsed.captured_at;
+      if (parsed.captured_at_epoch) capture.captured_at_epoch = parsed.captured_at_epoch;
+    } catch (e) {}
+  }
+
+  try {
+    const stat = fs.statSync(imagePath);
+    if (!capture.captured_at) capture.captured_at = stat.mtime.toISOString();
+    if (!capture.captured_at_epoch) capture.captured_at_epoch = Math.floor(stat.mtimeMs / 1000);
+  } catch (e) {}
+
+  if (capture.captured_at_epoch) {
+    const ageSeconds = Math.max(0, Math.floor(Date.now() / 1000 - capture.captured_at_epoch));
+    capture.age_seconds = ageSeconds;
+    capture.freshness = ageSeconds <= 15 ? 'fresh' : ageSeconds <= 60 ? 'aging' : 'stale';
+    capture.resume_rule = '继续执行、用户打断后恢复、或执行过任何可能改变 UI 的动作后，必须先重新截图，禁止沿用历史截图结论。';
+  }
+
+  return capture;
+}
+
 function analyze(imagePath) {
   const result = { 
     image_path: imagePath,
@@ -87,6 +115,7 @@ function analyze(imagePath) {
 
   const statSize = fs.statSync(imagePath).size;
   result.file_size_kb = Math.round(statSize / 1024 * 10) / 10;
+  result.capture = getCaptureMeta(imagePath);
 
   // 获取截图尺寸
   const { width: pw, height: ph } = getImageSize(imagePath);

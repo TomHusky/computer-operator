@@ -2,6 +2,8 @@
 
 Vision-driven macOS desktop automation. This skill allows an AI agent to control the desktop via screenshots, precise coordinate mapping, and native AppleScript interactions.
 
+Resume rule: if the user interrupts the run and later asks the AI to continue, the AI must capture a fresh screenshot first. Do not continue from historical screenshots or earlier visual conclusions.
+
 ---
 
 ## 🤖 AI Installation Guide (Self-Setup)
@@ -71,12 +73,20 @@ The script temporarily writes to the clipboard, pastes with `command+v`, then re
 
 ## 🚀 Core Workflow for AI Agents
 
-1. **State Perception**: Use `screenshot.sh` to capture the current screen.
+1. **State Perception**: Use `computer-operator observe` or `screenshot.sh` to capture the current screen.
 2. **Analysis**: Use `analyze_screen.js` to get the `scale_factor` and grid orientation.
 3. **Precision Locking**: Use `zoom_region.js` for small/scaled UI elements.
 4. **Action**: Use `app_action.js`, `mouse_action.js`, or `keyboard_action.js` to interact.
 5. **Validation**: Use `get_pixel.js` to confirm the UI changed as expected.
 6. **Cleanup**: All temporary files and screenshots are stored in `/tmp/computer-operator/`. The `screenshot.sh` script automatically clears this directory before each new capture.
+
+Recommended resume command:
+
+```bash
+computer-operator observe
+```
+
+This command always captures a new screenshot and prints analysis output including capture timestamp and freshness.
 
 ---
 ## 📂 Screenshot Storage
