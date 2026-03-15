@@ -237,4 +237,26 @@ program
     }
   });
 
+program
+  .command('task-run')
+  .description('Execute a natural-language desktop goal with a vision-only loop and capped retries')
+  .argument('<goal...>', 'Natural-language goal')
+  .option('--max-retries <n>', 'Maximum retries per step, hard capped at 3', '3')
+  .option('--json', 'Print JSON output')
+  .option('--dry-run', 'Only print the execution plan without controlling the desktop')
+  .action((goalParts, options) => {
+    const scriptPath = path.join(__dirname, '../scripts/task_executor.js');
+    const args = [...goalParts, '--max-retries', String(options.maxRetries)];
+    if (options.json) {
+      args.push('--json');
+    }
+    if (options.dryRun) {
+      args.push('--dry-run');
+    }
+    const result = runNodeScript(scriptPath, args, { stdio: 'inherit' });
+    if (result.status !== 0) {
+      console.error(chalk.red('\nTask execution failed.'));
+    }
+  });
+
 program.parse();

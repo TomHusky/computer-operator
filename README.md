@@ -210,6 +210,8 @@ If the agent receives a natural-language goal and needs a stable first action ch
 ```bash
 computer-operator task-plan "帮我打开 QQ 找到搜索框输入 张三"
 computer-operator task-plan "在 VS Code 里全局搜索 TODO" --json
+computer-operator task-run "帮我打开 QQ 找到张三并发送消息 你好"
+computer-operator task-run "在 VS Code 里搜索 TODO" --dry-run
 ```
 
 This planner performs a lightweight route decision:
@@ -218,6 +220,23 @@ This planner performs a lightweight route decision:
 - Maps the goal to a likely intent such as search, input, open file, global search, AI apply, or generic click
 - Returns structured slots such as app name, file name, contact name, search query, input text, or message content
 - Returns a suggested command chain and which specialized guideline file should be read first
+
+## Vision Task Runner
+
+The project now includes a closed-loop executor for multi-step desktop tasks:
+
+```bash
+computer-operator task-run "帮我打开 QQ 找到张三并发送消息 你好"
+computer-operator task-run "在 VS Code 里搜索 TODO" --dry-run
+computer-operator task-run "点击保存按钮" --max-retries 3 --json
+```
+
+Execution rules:
+
+- Every step is re-observed from a fresh screenshot before matching the target.
+- Matching is based on pure vision output from `ui-map`, not fixed coordinates or hotkeys.
+- After each click or input, the runner captures a fresh screenshot and validates the expected visual change.
+- Retry count is hard-capped at 3 for every step. If validation still fails after the third attempt, the task stops immediately and returns an explicit error.
 
 It is intentionally conservative: it does not execute actions, it only generates the first stable command sequence.
 ```

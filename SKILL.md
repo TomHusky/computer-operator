@@ -68,6 +68,7 @@ observe
 - 找输入框、搜索框：`computer-operator ui-map`，优先 `input` / `search_box`
 
 如果用户给的是一句完整目标，而不是明确命令，先让 task-router 产出首条命令链，再执行。
+- 如果需要直接执行复杂任务，优先使用：`computer-operator task-run "<用户目标>"`
 - 目标太密、太小、太模糊：`computer-operator zoom ...` 后再 `computer-operator ui-map --image <局部图>`
 - 页面需要往下找内容：`computer-operator mouse scroll <dx> <dy>`
 - 需要拖动滑块、窗口、分隔条、文件：`computer-operator mouse drag <x1> <y1> <x2> <y2>`
@@ -92,6 +93,20 @@ computer-operator task-plan "<用户目标>"
 ```
 
 让系统先输出参数槽位、建议命令链、场景和推荐阅读的专用指南。
+
+复杂任务也可以直接执行：
+
+```text
+computer-operator task-run "<用户目标>"
+```
+
+执行器规则：
+
+1. 每一步执行前强制重新截图。
+2. 每一步都只基于视觉结果定位目标控件。
+3. 动作后必须重新观察并校验预期结果。
+4. 单步最多重试 3 次。
+5. 超过 3 次仍失败，立即结束整个任务并输出错误原因。
 
 #### 模板 A：打开 App -> 到达目标界面
 
