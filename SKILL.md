@@ -9,6 +9,18 @@ metadata:
   author: Copilot
   version: "4.0"
   platform: macOS
+  image-sources:
+    - id: latest-screenshot
+      description: 返回 computer-operator 最近一次截图或局部放大图路径
+      type: command-json
+      commands:
+        - computer-operator analyze
+        - computer-operator observe
+      pathFields:
+        - images.latest_zoom
+        - images.highres
+        - images.preview
+        - image_path
 ---
 
 # Computer Operator
