@@ -35,6 +35,18 @@ const KEY_MAP = {
   'f9': 'f9', 'f10': 'f10', 'f11': 'f11', 'f12': 'f12',
 };
 
+const MODIFIER_KEY_MAP = {
+  cmd: 'command down',
+  command: 'command down',
+  meta: 'command down',
+  ctrl: 'control down',
+  control: 'control down',
+  alt: 'option down',
+  option: 'option down',
+  opt: 'option down',
+  shift: 'shift down'
+};
+
 function runAppleScript(script) {
   const result = spawnSync('osascript', ['-e', script], {
     encoding: 'utf8',
@@ -216,6 +228,69 @@ function pressKey(keyName) {
   console.log(`✅ 按键: ${keyName}`);
 }
 
+function parseKeyCombo(parts) {
+  const normalizedParts = parts
+    .flatMap((part) => String(part || '').split('+'))
+    .map((part) => part.trim().toLowerCase())
+    .filter(Boolean);
+
+  if (normalizedParts.length === 0) {
+    throw new Error('请提供键名');
+  }
+
+  const modifiers = [];
+  const keys = [];
+
+  for (const part of normalizedParts) {
+    if (MODIFIER_KEY_MAP[part]) {
+      modifiers.push(MODIFIER_KEY_MAP[part]);
+      continue;
+    }
+    keys.push(part);
+  }
+
+  if (keys.length !== 1) {
+    throw new Error('组合键格式无效，请使用类似 cmd k、cmd+k、cmd shift p');
+  }
+
+  return {
+    modifiers: [...new Set(modifiers)],
+    key: keys[0]
+  };
+}
+
+function keyCodeForInput(keyName) {
+  const mapped = KEY_MAP[keyName];
+  if (mapped) {
+    return { type: 'keycode', value: keyCodeForName(mapped) };
+  }
+
+  if (keyName.length === 1) {
+    return { type: 'keystroke', value: keyName };
+  }
+
+  throw new Error(`未知键名: ${keyName}，请参考文档`);
+}
+
+function pressKeyCombo(parts) {
+  const combo = parseKeyCombo(parts);
+  const input = keyCodeForInput(combo.key);
+
+  if (combo.modifiers.length === 0) {
+    pressKey(combo.key);
+    return;
+  }
+
+  if (input.type === 'keycode') {
+    runAppleScript(`tell application "System Events" to key code ${input.value} using {${combo.modifiers.join(', ')}}`);
+  } else {
+    const escaped = input.value.replace(/"/g, '\\"');
+    runAppleScript(`tell application "System Events" to keystroke "${escaped}" using {${combo.modifiers.join(', ')}}`);
+  }
+
+  console.log(`✅ 组合键: ${parts.join(' ')}`);
+}
+
 // key code 映射（常用键）
 function keyCodeForName(name) {
   const codes = {
@@ -242,6 +317,8 @@ function main() {
   node keyboard_action.js type_enter <文字>
   node keyboard_action.js paste_enter <文字>
   node keyboard_action.js key <键名>
+  node keyboard_action.js key <修饰键> <键名>
+  node keyboard_action.js key cmd+k
   --direct      强制只走辅助功能直写，不回退剪贴板
   --clipboard   强制只走剪贴板粘贴`);
     process.exit(0);
@@ -272,7 +349,7 @@ function main() {
         break;
       case 'key':
         if (!parsed.valueParts[0]) throw new Error('请提供键名');
-        pressKey(parsed.valueParts[0]);
+        pressKeyCombo(parsed.valueParts);
         break;
       default:
         console.error(`❌ 未知操作: ${action}`);
