@@ -95,6 +95,8 @@ function printHelp() {
     `  computer-operator position\n` +
     `  computer-operator type <文本...>\n` +
     `  computer-operator send <文本...>\n` +
+    `  computer-operator type --direct <文本...>\n` +
+    `  computer-operator send --direct <文本...>\n` +
     `  computer-operator key <键名>\n` +
     `  computer-operator zoom <x> <y> <width> <height> [output]\n` +
     `  computer-operator pixel <x> <y> [image]\n\n` +
@@ -201,7 +203,18 @@ function mouseAction(action, args) {
 }
 
 function keyboardAction(action, args) {
-  const text = args.join(' ');
+  const passthroughFlags = [];
+  const textParts = [];
+
+  for (const arg of args) {
+    if (arg === '--direct' || arg === '--clipboard') {
+      passthroughFlags.push(arg);
+      continue;
+    }
+    textParts.push(arg);
+  }
+
+  const text = textParts.join(' ');
   if ((action === 'type' || action === 'send') && !text) {
     process.stderr.write('缺少输入文本\n');
     process.exit(1);
@@ -212,7 +225,7 @@ function keyboardAction(action, args) {
     send: 'paste_enter',
     key: 'key'
   };
-  const payload = action === 'key' ? args : [text];
+  const payload = action === 'key' ? textParts : [...passthroughFlags, text];
   const result = runNodeScript('keyboard_action.js', [mapping[action], ...payload]);
   exitWithResult(result, '键盘操作失败');
 }

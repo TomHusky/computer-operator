@@ -108,6 +108,55 @@ function writeClipboard(text) {
   ], [text]);
 }
 
+function parseCliArgs(argv) {
+  const options = {
+    action: String(argv[0] || '').toLowerCase(),
+    forceDirect: false,
+    forceClipboard: false,
+    valueParts: []
+  };
+
+  for (let index = 1; index < argv.length; index++) {
+    const arg = argv[index];
+    if (arg === '--direct') {
+      options.forceDirect = true;
+      continue;
+    }
+    if (arg === '--clipboard') {
+      options.forceClipboard = true;
+      continue;
+    }
+    options.valueParts.push(arg);
+  }
+
+  return options;
+}
+
+function shouldPreferAccessibilityInsert(text) {
+  return /[^\x00-\x7F]/.test(String(text || ''));
+}
+
+function insertViaAccessibility(text) {
+  runAppleScriptWithArgs([
+    'on run argv',
+    'set inputText to item 1 of argv',
+    'tell application "System Events"',
+    'set frontProcess to first application process whose frontmost is true',
+    'tell frontProcess',
+    'set focusedElement to value of attribute "AXFocusedUIElement"',
+    'try',
+    'set currentValue to value of attribute "AXValue" of focusedElement',
+    'on error',
+    'set currentValue to ""',
+    'end try',
+    'if currentValue is missing value then set currentValue to ""',
+    'set value of attribute "AXValue" of focusedElement to (currentValue & inputText)',
+    'end tell',
+    'end tell',
+    'end run'
+  ], [text]);
+}
+
 function typeViaClipboard(text) {
   const previousClipboard = withRetries('读取剪贴板失败', () => readClipboard(), 2);
 
@@ -127,8 +176,27 @@ function typeViaClipboard(text) {
   }
 }
 
-function typeEnter(text) {
+function typeText(text, options = {}) {
+  const preferDirect = options.forceDirect || (!options.forceClipboard && shouldPreferAccessibilityInsert(text));
+
+  if (preferDirect) {
+    try {
+      withRetries('辅助功能直接写入失败', () => insertViaAccessibility(text), 2);
+      sleep(DEFAULT_DELAY_MS);
+      console.log(`✅ 文本已写入: ${JSON.stringify(text)}`);
+      return;
+    } catch (error) {
+      if (options.forceDirect) {
+        throw error;
+      }
+    }
+  }
+
   typeViaClipboard(text);
+}
+
+function typeEnter(text, options = {}) {
+  typeText(text, options);
   sleep(DEFAULT_DELAY_MS);
   withRetries('回车失败', () => runAppleScript('tell application "System Events" to key code 36'), 3);
   console.log(`✅ 粘贴并回车: ${JSON.stringify(text)}`);
@@ -165,6 +233,7 @@ function keyCodeForName(name) {
 // ─── 主函数 ──────────────────────────────────────────────────────
 function main() {
   const args = process.argv.slice(2);
+  const parsed = parseCliArgs(args);
 
   if (args.length === 0) {
     console.log(`用法:
@@ -172,27 +241,38 @@ function main() {
   node keyboard_action.js paste <文字>
   node keyboard_action.js type_enter <文字>
   node keyboard_action.js paste_enter <文字>
-  node keyboard_action.js key <键名>`);
+  node keyboard_action.js key <键名>
+  --direct      强制只走辅助功能直写，不回退剪贴板
+  --clipboard   强制只走剪贴板粘贴`);
     process.exit(0);
   }
 
-  const action = args[0].toLowerCase();
-  const rest = args.slice(1).join(' ');
+  const action = parsed.action;
+  const rest = parsed.valueParts.join(' ');
+  const modeOptions = {
+    forceDirect: parsed.forceDirect,
+    forceClipboard: parsed.forceClipboard
+  };
+
+  if (parsed.forceDirect && parsed.forceClipboard) {
+    console.error('❌ 不能同时指定 --direct 和 --clipboard');
+    process.exit(1);
+  }
 
   try {
     switch (action) {
       case 'type':
       case 'paste':
       case 'type_cn': // 保留 type_cn 别名
-        typeViaClipboard(rest);
+        typeText(rest, modeOptions);
         break;
       case 'type_enter':
       case 'paste_enter':
-        typeEnter(rest);
+        typeEnter(rest, modeOptions);
         break;
       case 'key':
-        if (!args[1]) throw new Error('请提供键名');
-        pressKey(args[1]);
+        if (!parsed.valueParts[0]) throw new Error('请提供键名');
+        pressKey(parsed.valueParts[0]);
         break;
       default:
         console.error(`❌ 未知操作: ${action}`);
