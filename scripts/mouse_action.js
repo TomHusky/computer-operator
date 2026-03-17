@@ -13,91 +13,18 @@
  */
 
 const { spawnSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
-
-function getDisplayScaleFactorFallback() {
-  try {
-    const logical = spawnSync('osascript', [
-      '-e',
-      'tell application "Finder" to get bounds of window of desktop'
-    ], { encoding: 'utf8', timeout: 5000 });
-
-    const baseDir = '/tmp/computer-operator';
-    const tmpPath = path.join(baseDir, 'co_scale_probe.png');
-    spawnSync('screencapture', ['-x', tmpPath], { timeout: 5000 });
-    const sips = spawnSync('sips', ['-g', 'pixelWidth', tmpPath], { encoding: 'utf8' });
-    if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath);
-
-    let physicalW = null;
-    if (sips.stdout) {
-      for (const line of sips.stdout.split('\n')) {
-        if (line.includes('pixelWidth')) {
-          physicalW = parseInt(line.split(':')[1].trim(), 10);
-          break;
-        }
-      }
-    }
-
-    let logicalW = null;
-    if (logical.status === 0 && logical.stdout) {
-      const parts = logical.stdout.trim().split(', ');
-      if (parts.length === 4) {
-        logicalW = parseInt(parts[2], 10);
-      }
-    }
-
-    if (physicalW && logicalW && logicalW > 0) {
-      return Math.round((physicalW / logicalW) * 100) / 100;
-    }
-  } catch (error) {
-  }
-
-  return 2.0;
-}
-
-function getScreenInfoScaleFactor() {
-  try {
-    const scriptPath = path.join(__dirname, 'screen_info.js');
-    const result = spawnSync('node', [scriptPath], {
-      encoding: 'utf8',
-      timeout: 10000
-    });
-
-    if (result.status === 0 && result.stdout) {
-      const parsed = JSON.parse(result.stdout);
-      const scaleFactor = Number(parsed.scale_factor);
-      if (Number.isFinite(scaleFactor) && scaleFactor > 0) {
-        return scaleFactor;
-      }
-    }
-  } catch (error) {
-  }
-
-  return getDisplayScaleFactorFallback();
-}
-
-function getImageSize(imagePath) {
-  const sips = spawnSync('sips', ['-g', 'pixelWidth', '-g', 'pixelHeight', imagePath], {
-    encoding: 'utf8',
-    timeout: 10000
-  });
-
-  let width = null;
-  let height = null;
-  for (const line of sips.stdout.split('\n')) {
-    if (line.includes('pixelWidth')) width = parseInt(line.split(':')[1].trim(), 10);
-    if (line.includes('pixelHeight')) height = parseInt(line.split(':')[1].trim(), 10);
-  }
-
-  return { width, height };
-}
+const {
+  DEFAULT_HIGHRES_IMAGE,
+  DEFAULT_PREVIEW_IMAGE,
+  getEffectiveScaleFactor,
+  resolveExistingPath
+} = require('./screen_utils');
 
 function parseCliArgs(argv) {
   const logicalMode = argv.includes('--logical');
   const highresMode = argv.includes('--highres');
   const imageFlagIndex = argv.indexOf('--image');
-  let sourceImage = highresMode ? '/tmp/computer-operator/latest_highres.png' : '/tmp/computer-operator/latest.jpg';
+  let sourceImage = highresMode ? DEFAULT_HIGHRES_IMAGE : DEFAULT_PREVIEW_IMAGE;
 
   if (imageFlagIndex >= 0 && argv[imageFlagIndex + 1]) {
     sourceImage = argv[imageFlagIndex + 1];
@@ -117,27 +44,6 @@ function parseCliArgs(argv) {
   }
 
   return { logicalMode, filteredArgs, sourceImage };
-}
-
-function getEffectiveScaleFactor(sourceImage) {
-  const normalizedSource = fs.existsSync(sourceImage) ? fs.realpathSync(sourceImage) : sourceImage;
-  const currentSize = getImageSize(normalizedSource);
-  if (!currentSize.width) {
-    return getScreenInfoScaleFactor();
-  }
-
-  const highresPath = '/tmp/computer-operator/latest_highres.png';
-  let referenceWidth = currentSize.width;
-  if (fs.existsSync(highresPath)) {
-    const highresSize = getImageSize(highresPath);
-    if (highresSize.width) {
-      referenceWidth = highresSize.width;
-    }
-  }
-
-  const baseScale = getScreenInfoScaleFactor();
-  const scale = baseScale * (currentSize.width / referenceWidth);
-  return Math.round(scale * 10000) / 10000;
 }
 
 function toLogical(x, y, scale) {
@@ -300,9 +206,10 @@ function main() {
   const nums = filteredArgs.slice(1).map(Number);
 
   let scale = 1.0;
+  const normalizedSourceImage = resolveExistingPath(sourceImage);
   if (!logicalMode && action !== 'position') {
-    scale = getEffectiveScaleFactor(sourceImage);
-    console.log(`ℹ️  source_image=${sourceImage}`);
+    scale = getEffectiveScaleFactor(normalizedSourceImage);
+    console.log(`ℹ️  source_image=${normalizedSourceImage}`);
     console.log(`ℹ️  scale_factor=${scale}，截图坐标自动 ÷${scale} = 逻辑点击坐标`);
   }
 

@@ -1,262 +1,329 @@
 #!/usr/bin/env node
 
-/**
- * CLI Entry for Computer Operator
- * Provides a high-level command to execute desktop automation tasks.
- */
-
-const { program } = require('commander');
-const chalk = require('chalk');
-const ora = require('ora');
 const { spawnSync } = require('child_process');
+const fs = require('fs');
 const path = require('path');
 
-function runNodeScript(scriptPath, args = [], options = {}) {
-  return spawnSync('node', [scriptPath, ...args], {
+const ROOT = path.join(__dirname, '..');
+const SCRIPTS = path.join(ROOT, 'scripts');
+const DEFAULT_PREVIEW = '/tmp/computer-operator/latest.jpg';
+
+function run(command, args, options = {}) {
+  const result = spawnSync(command, args, {
     encoding: 'utf8',
+    stdio: options.stdio || 'pipe',
     ...options
   });
+
+  if (result.error) {
+    throw result.error;
+  }
+
+  return result;
 }
 
-function runShellScript(scriptPath, args = [], options = {}) {
-  return spawnSync('bash', [scriptPath, ...args], {
-    encoding: 'utf8',
-    ...options
-  });
+function runNodeScript(scriptName, args = [], options = {}) {
+  const scriptPath = path.join(SCRIPTS, scriptName);
+  return run('node', [scriptPath, ...args], options);
 }
 
-program
-  .name('computer-operator')
-  .description('Vision-driven macOS desktop automation using natural language')
-  .version('2.1.0');
+function runShellScript(scriptName, args = [], options = {}) {
+  const scriptPath = path.join(SCRIPTS, scriptName);
+  return run('bash', [scriptPath, ...args], options);
+}
 
-program
-  .command('info')
-  .description('Display screen information and scale factor')
-  .action(() => {
-    const scriptPath = path.join(__dirname, '../scripts/screen_info.js');
-    const result = runNodeScript(scriptPath, [], { stdio: 'inherit' });
-    if (result.status !== 0) {
-      console.error(chalk.red('\nFailed to get screen info.'));
+function exitWithResult(result, failureMessage) {
+  if (result.stdout) {
+    process.stdout.write(result.stdout);
+    if (!result.stdout.endsWith('\n')) {
+      process.stdout.write('\n');
     }
-  });
+  }
 
-program
-  .command('screenshot')
-  .description('Capture a screenshot of the main screen')
-  .action(() => {
-    const scriptPath = path.join(__dirname, '../scripts/screenshot.sh');
-    const spinner = ora('Capturing screenshot...').start();
-    const result = runShellScript(scriptPath);
-    if (result.status === 0) {
-      spinner.succeed(chalk.green('Screenshot saved to /tmp/computer-operator/latest.jpg and /tmp/computer-operator/latest_highres.png'));
-      if (result.stdout) {
-        process.stdout.write(result.stdout);
-      }
-    } else {
-      spinner.fail(chalk.red('Failed to capture screenshot.'));
-      if (result.stderr) {
-        process.stderr.write(result.stderr);
+  if (result.status !== 0) {
+    if (result.stderr) {
+      process.stderr.write(result.stderr);
+      if (!result.stderr.endsWith('\n')) {
+        process.stderr.write('\n');
       }
     }
-  });
-
-program
-  .command('analyze')
-  .description('Analyze the latest screenshot and output coordinate guide')
-  .argument('[image]', 'Path to the image to analyze', '/tmp/computer-operator/latest.jpg')
-  .option('--full', 'Include detailed grid output')
-  .action((image, options) => {
-    const scriptPath = path.join(__dirname, '../scripts/analyze_screen.js');
-    const args = [image, options.full ? '--full' : '--brief'];
-    const result = runNodeScript(scriptPath, args, { stdio: 'inherit' });
-    if (result.status !== 0) {
-      console.error(chalk.red('\nAnalysis failed.'));
+    if (!result.stderr && failureMessage) {
+      process.stderr.write(`${failureMessage}\n`);
     }
-  });
+    process.exit(result.status || 1);
+  }
+}
 
-program
-  .command('observe')
-  .description('Capture a fresh screenshot and immediately analyze it')
-  .option('--full', 'Include detailed grid output')
-  .action((options) => {
-    const screenshotPath = path.join(__dirname, '../scripts/screenshot.sh');
-    const analyzePath = path.join(__dirname, '../scripts/analyze_screen.js');
-    const spinner = ora('Capturing a fresh screenshot and analyzing screen state...').start();
+function getImageSize(imagePath) {
+  const normalized = fs.existsSync(imagePath) ? fs.realpathSync(imagePath) : imagePath;
+  const result = run('sips', ['-g', 'pixelWidth', '-g', 'pixelHeight', normalized], { timeout: 10000 });
+  if (result.status !== 0) {
+    return null;
+  }
 
-    const screenshot = runShellScript(screenshotPath);
-    if (screenshot.status !== 0) {
-      spinner.fail(chalk.red('Failed to capture screenshot.'));
-      if (screenshot.stderr) {
-        process.stderr.write(screenshot.stderr);
-      }
+  let width = null;
+  let height = null;
+  for (const line of result.stdout.split('\n')) {
+    if (line.includes('pixelWidth')) width = parseInt(line.split(':')[1].trim(), 10);
+    if (line.includes('pixelHeight')) height = parseInt(line.split(':')[1].trim(), 10);
+  }
+
+  if (!Number.isFinite(width) || !Number.isFinite(height)) {
+    return null;
+  }
+
+  return { width, height };
+}
+
+function printHelp() {
+  process.stdout.write(`Computer Operator\n\n` +
+    `极简 macOS 电脑操控 CLI。核心思路只有两步：先重新截图给 AI 看，再执行原子动作。\n\n` +
+    `用法:\n` +
+    `  computer-operator                  默认等同于 observe\n` +
+    `  computer-operator observe [--full]\n` +
+    `  computer-operator analyze [image] [--full]\n` +
+    `  computer-operator info\n` +
+    `  computer-operator open <App 名称> [--fullscreen]\n` +
+    `  computer-operator activate <App 名称>\n` +
+    `  computer-operator fullscreen <App 名称>\n` +
+    `  computer-operator click <x> <y> [--logical] [--highres] [--image <path>]\n` +
+    `  computer-operator double-click <x> <y> [--logical] [--highres] [--image <path>]\n` +
+    `  computer-operator right-click <x> <y> [--logical] [--highres] [--image <path>]\n` +
+    `  computer-operator move <x> <y> [--logical] [--highres] [--image <path>]\n` +
+    `  computer-operator drag <x1> <y1> <x2> <y2> [--logical] [--highres] [--image <path>]\n` +
+    `  computer-operator scroll <x> <y> <amount> [--logical] [--highres] [--image <path>]\n` +
+    `  computer-operator position\n` +
+    `  computer-operator type <文本...>\n` +
+    `  computer-operator send <文本...>\n` +
+    `  computer-operator key <键名>\n` +
+    `  computer-operator zoom <x> <y> <width> <height> [output]\n` +
+    `  computer-operator pixel <x> <y> [image]\n\n` +
+    `兼容别名:\n` +
+    `  app open|activate|fullscreen\n` +
+    `  mouse click|double_click|right_click|move|drag|scroll|position\n` +
+    `  keyboard paste|type|paste_enter|type_enter|key\n`
+  );
+}
+
+function normalizeLegacyCommand(argv) {
+  const args = [...argv];
+  if (args.length === 0) {
+    return { command: 'observe', args: [] };
+  }
+
+  const top = args.shift();
+  if (top === 'app') {
+    return { command: args.shift() || 'help', args };
+  }
+
+  if (top === 'mouse') {
+    const mapping = {
+      click: 'click',
+      double_click: 'double-click',
+      right_click: 'right-click',
+      move: 'move',
+      drag: 'drag',
+      scroll: 'scroll',
+      position: 'position'
+    };
+    const sub = args.shift() || 'help';
+    return { command: mapping[sub] || sub, args };
+  }
+
+  if (top === 'keyboard') {
+    const mapping = {
+      type: 'type',
+      paste: 'type',
+      type_cn: 'type',
+      paste_enter: 'send',
+      type_enter: 'send',
+      key: 'key'
+    };
+    const sub = args.shift() || 'help';
+    return { command: mapping[sub] || sub, args };
+  }
+
+  return { command: top, args };
+}
+
+function captureOnly() {
+  const result = runShellScript('screenshot.sh');
+  exitWithResult(result, '截图失败');
+}
+
+function observe(args) {
+  const capture = runShellScript('screenshot.sh');
+  if (capture.status !== 0) {
+    exitWithResult(capture, '截图失败');
+  }
+
+  const analyzeArgs = [DEFAULT_PREVIEW];
+  if (args.includes('--full')) {
+    analyzeArgs.push('--full');
+  } else {
+    analyzeArgs.push('--brief');
+  }
+
+  const analysis = runNodeScript('analyze_screen.js', analyzeArgs);
+  exitWithResult(analysis, '分析失败');
+}
+
+function analyze(args) {
+  const forwarded = [...args];
+  const hasImage = forwarded.some((arg) => !arg.startsWith('--'));
+  if (!hasImage) {
+    forwarded.unshift(DEFAULT_PREVIEW);
+  }
+  if (!forwarded.includes('--brief') && !forwarded.includes('--full')) {
+    forwarded.push('--brief');
+  }
+
+  const result = runNodeScript('analyze_screen.js', forwarded);
+  exitWithResult(result, '分析失败');
+}
+
+function appAction(action, args) {
+  if (args.length === 0) {
+    process.stderr.write('缺少 App 名称\n');
+    process.exit(1);
+  }
+  const result = runNodeScript('app_action.js', [action, ...args]);
+  exitWithResult(result, '应用操作失败');
+}
+
+function mouseAction(action, args) {
+  const mapping = {
+    'double-click': 'double_click',
+    'right-click': 'right_click'
+  };
+  const result = runNodeScript('mouse_action.js', [mapping[action] || action, ...args]);
+  exitWithResult(result, '鼠标操作失败');
+}
+
+function keyboardAction(action, args) {
+  const text = args.join(' ');
+  if ((action === 'type' || action === 'send') && !text) {
+    process.stderr.write('缺少输入文本\n');
+    process.exit(1);
+  }
+
+  const mapping = {
+    type: 'paste',
+    send: 'paste_enter',
+    key: 'key'
+  };
+  const payload = action === 'key' ? args : [text];
+  const result = runNodeScript('keyboard_action.js', [mapping[action], ...payload]);
+  exitWithResult(result, '键盘操作失败');
+}
+
+function zoom(args) {
+  const result = runNodeScript('zoom_region.js', args);
+  exitWithResult(result, '局部放大失败');
+}
+
+function pixel(args) {
+  const result = runNodeScript('get_pixel.js', args);
+  exitWithResult(result, '像素读取失败');
+}
+
+function info() {
+  const result = runNodeScript('screen_info.js');
+  exitWithResult(result, '屏幕信息读取失败');
+}
+
+function scrollCenterShortcut(args) {
+  const numeric = args.filter((arg) => !arg.startsWith('--'));
+  if (numeric.length !== 1) {
+    return args;
+  }
+
+  const imageFlagIndex = args.indexOf('--image');
+  let imagePath = DEFAULT_PREVIEW;
+  if (args.includes('--highres')) {
+    imagePath = '/tmp/computer-operator/latest_highres.png';
+  }
+  if (imageFlagIndex >= 0 && args[imageFlagIndex + 1]) {
+    imagePath = args[imageFlagIndex + 1];
+  }
+
+  const size = getImageSize(imagePath);
+  if (!size) {
+    return args;
+  }
+
+  const amount = numeric[0];
+  const passthroughFlags = [];
+  let consumed = false;
+  for (let index = 0; index < args.length; index++) {
+    const arg = args[index];
+    if (!consumed && arg === amount) {
+      consumed = true;
+      continue;
+    }
+    passthroughFlags.push(arg);
+  }
+
+  return [String(Math.round(size.width / 2)), String(Math.round(size.height / 2)), amount, ...passthroughFlags];
+}
+
+function main() {
+  const { command, args } = normalizeLegacyCommand(process.argv.slice(2));
+
+  switch (command) {
+    case 'help':
+    case '--help':
+    case '-h':
+      printHelp();
       return;
-    }
-
-    spinner.text = 'Analyzing fresh screenshot...';
-    const analyze = runNodeScript(analyzePath, ['/tmp/computer-operator/latest.jpg', options.full ? '--full' : '--brief']);
-
-    if (analyze.status !== 0) {
-      spinner.fail(chalk.red('Failed to analyze screenshot.'));
-      if (analyze.stderr) {
-        process.stderr.write(analyze.stderr);
-      }
+    case 'observe':
+      observe(args);
       return;
-    }
+    case 'screenshot':
+      captureOnly();
+      return;
+    case 'analyze':
+      analyze(args);
+      return;
+    case 'info':
+      info();
+      return;
+    case 'open':
+      appAction('open', args);
+      return;
+    case 'activate':
+      appAction('activate', args);
+      return;
+    case 'fullscreen':
+      appAction('fullscreen', args);
+      return;
+    case 'click':
+    case 'double-click':
+    case 'right-click':
+    case 'move':
+    case 'drag':
+    case 'position':
+      mouseAction(command, args);
+      return;
+    case 'scroll':
+      mouseAction('scroll', scrollCenterShortcut(args));
+      return;
+    case 'type':
+    case 'send':
+    case 'key':
+      keyboardAction(command, args);
+      return;
+    case 'zoom':
+      zoom(args);
+      return;
+    case 'pixel':
+      pixel(args);
+      return;
+    default:
+      process.stderr.write(`未知命令: ${command}\n\n`);
+      printHelp();
+      process.exit(1);
+  }
+}
 
-    spinner.succeed(chalk.green('Fresh screenshot captured and analyzed.'));
-    if (screenshot.stdout) {
-      process.stdout.write(screenshot.stdout);
-    }
-    process.stdout.write(analyze.stdout);
-  });
-
-program
-  .command('app')
-  .description('Open, activate, or fullscreen an app')
-  .argument('<action>', 'open | activate | fullscreen')
-  .argument('<name...>', 'App name')
-  .option('-f, --fullscreen', 'Enter fullscreen after opening')
-  .action((action, nameParts, options) => {
-    const scriptPath = path.join(__dirname, '../scripts/app_action.js');
-    const args = [scriptPath, action, ...nameParts];
-
-    if (options.fullscreen) {
-      args.push('--fullscreen');
-    }
-
-    const result = spawnSync('node', args, { stdio: 'inherit' });
-    if (result.status !== 0) {
-      console.error(chalk.red('\nApp action failed.'));
-    }
-  });
-
-program
-  .command('keyboard')
-  .description('Paste text or press a single key')
-  .argument('<action>', 'type | paste | type_enter | paste_enter | key')
-  .argument('[value...]', 'Text or key payload')
-  .action((action, valueParts) => {
-    const scriptPath = path.join(__dirname, '../scripts/keyboard_action.js');
-    const args = [scriptPath, action, ...valueParts];
-    const result = spawnSync('node', args, { stdio: 'inherit' });
-    if (result.status !== 0) {
-      console.error(chalk.red('\nKeyboard action failed.'));
-    }
-  });
-
-program
-  .command('mouse')
-  .description('Click, scroll, move, or drag with screenshot coordinates')
-  .argument('<action>', 'click | double_click | right_click | move | drag | scroll | position')
-  .argument('[value...]', 'Coordinates and parameters')
-  .action((action, valueParts) => {
-    const scriptPath = path.join(__dirname, '../scripts/mouse_action.js');
-    const result = runNodeScript(scriptPath, [action, ...valueParts], { stdio: 'inherit' });
-    if (result.status !== 0) {
-      console.error(chalk.red('\nMouse action failed.'));
-    }
-  });
-
-program
-  .command('zoom')
-  .description('Crop and enlarge a region from the latest high-resolution screenshot')
-  .argument('<x>', 'Screenshot x coordinate')
-  .argument('<y>', 'Screenshot y coordinate')
-  .argument('<width>', 'Region width')
-  .argument('<height>', 'Region height')
-  .argument('[output]', 'Optional output path')
-  .action((x, y, width, height, output) => {
-    const scriptPath = path.join(__dirname, '../scripts/zoom_region.js');
-    const args = [x, y, width, height];
-    if (output) {
-      args.push(output);
-    }
-    const result = runNodeScript(scriptPath, args, { stdio: 'inherit' });
-    if (result.status !== 0) {
-      console.error(chalk.red('\nZoom action failed.'));
-    }
-  });
-
-program
-  .command('pixel')
-  .description('Read pixel color from the latest high-resolution screenshot')
-  .argument('<x>', 'Screenshot x coordinate')
-  .argument('<y>', 'Screenshot y coordinate')
-  .argument('[image]', 'Optional image path')
-  .action((x, y, image) => {
-    const scriptPath = path.join(__dirname, '../scripts/get_pixel.js');
-    const args = [x, y];
-    if (image) {
-      args.push(image);
-    }
-    const result = runNodeScript(scriptPath, args, { stdio: 'inherit' });
-    if (result.status !== 0) {
-      console.error(chalk.red('\nPixel lookup failed.'));
-    }
-  });
-
-program
-  .command('ui-map')
-  .description('Extract actionable UI elements from a screenshot using pure vision')
-  .option('--image <path>', 'Image path to analyze', '/tmp/computer-operator/latest.jpg')
-  .option('--mode <mode>', 'Detection mode: fast | balanced | precise', 'balanced')
-  .option('--max-elements <n>', 'Maximum returned elements', '120')
-  .option('--max-refinements <n>', 'Maximum local second-pass refinements', '2')
-  .option('--time-budget-ms <n>', 'Soft latency budget for the whole detection flow')
-  .option('--debug', 'Include raw OCR and rectangle candidates')
-  .action((options) => {
-    const scriptPath = path.join(__dirname, '../scripts/ui_map.js');
-    const args = ['--image', options.image, '--mode', options.mode, '--max-elements', options.maxElements, '--max-refinements', options.maxRefinements];
-    if (options.timeBudgetMs) {
-      args.push('--time-budget-ms', options.timeBudgetMs);
-    }
-    if (options.debug) {
-      args.push('--debug');
-    }
-    const result = runNodeScript(scriptPath, args, { stdio: 'inherit' });
-    if (result.status !== 0) {
-      console.error(chalk.red('\nUI map extraction failed.'));
-    }
-  });
-  
-program
-  .command('task-plan')
-  .description('Convert a natural-language desktop goal into a suggested command chain')
-  .argument('<goal...>', 'Natural-language goal')
-  .option('--json', 'Print JSON output')
-  .action((goalParts, options) => {
-    const scriptPath = path.join(__dirname, '../scripts/task_router.js');
-    const args = [...goalParts];
-    if (options.json) {
-      args.push('--json');
-    }
-    const result = runNodeScript(scriptPath, args, { stdio: 'inherit' });
-    if (result.status !== 0) {
-      console.error(chalk.red('\nTask planning failed.'));
-    }
-  });
-
-program
-  .command('task-run')
-  .description('Execute a natural-language desktop goal with a vision-only loop and capped retries')
-  .argument('<goal...>', 'Natural-language goal')
-  .option('--max-retries <n>', 'Maximum retries per step, hard capped at 3', '3')
-  .option('--json', 'Print JSON output')
-  .option('--dry-run', 'Only print the execution plan without controlling the desktop')
-  .action((goalParts, options) => {
-    const scriptPath = path.join(__dirname, '../scripts/task_executor.js');
-    const args = [...goalParts, '--max-retries', String(options.maxRetries)];
-    if (options.json) {
-      args.push('--json');
-    }
-    if (options.dryRun) {
-      args.push('--dry-run');
-    }
-    const result = runNodeScript(scriptPath, args, { stdio: 'inherit' });
-    if (result.status !== 0) {
-      console.error(chalk.red('\nTask execution failed.'));
-    }
-  });
-
-program.parse();
+main();
